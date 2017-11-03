@@ -11,12 +11,37 @@ import (
 	"github.com/golang/protobuf/ptypes/any"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	dat "gopkg.in/mgutz/dat.v1"
 	"gopkg.in/mgutz/dat.v1/sqlx-runner"
 
 	context "golang.org/x/net/context"
 )
+
+const (
+	usrRoleJoin = `
+			auth_user user
+			JOIN auth_user_info uinfo
+			ON user.auth_user_id = uinfo.auth_user_id
+	`
+)
+
+var coreUserCols = []string{"first_name", "last_name", "email"}
+var userInfoCols = []string{
+	"auth_user_id",
+	"organization",
+	"group_name",
+	"first_address",
+	"second_address",
+	"city",
+	"state",
+	"zipcode",
+	"country",
+	"phone",
+	"created_at",
+	"updated_at",
+}
 
 type dbUser struct {
 	AuthUserId    int64          `db:"auth_user_id"`
@@ -37,13 +62,27 @@ type dbUser struct {
 	UpdatedAt     dat.NullTime   `db:"updated_at"`
 }
 
-const (
-	usrRoleJoin = `
-			auth_user user
-			JOIN auth_user_info uinfo
-			ON user.auth_user_id = uinfo.auth_user_id
-	`
-)
+type dbCoreUser struct {
+	FirstName string `db:"first_name"`
+	LastName  string `db:"last_name"`
+	Email     string `db:"email"`
+	IsActive  bool   `db:"is_active"`
+}
+
+type dbUserInfo struct {
+	AuthUserId    int64          `db:"auth_user_id"`
+	Organization  dat.NullString `db:"organization"`
+	GroupName     dat.NullString `db:"group_name"`
+	FirstAddress  dat.NullString `db:"first_address"`
+	SecondAddress dat.NullString `db:"second_address"`
+	City          dat.NullString `db:"city"`
+	State         dat.NullString `db:"state"`
+	Zipcode       dat.NullString `db:"zipcode"`
+	Country       dat.NullString `db:"country"`
+	Phone         dat.NullString `db:"phone"`
+	CreatedAt     dat.NullTime   `db:"created_at"`
+	UpdatedAt     dat.NullTime   `db:"updated_at"`
+}
 
 type UserService struct {
 	Dbh             *runner.DB
@@ -58,6 +97,7 @@ type UserService struct {
 	filterStr       string
 	params          *aphgrpc.JSONAPIParams
 	listMethod      bool
+	requiredAttrs   []string
 }
 
 func NewUserService(dbh *runner.DB, pathPrefix string, baseURL string) *UserService {
@@ -87,7 +127,12 @@ func NewUserService(dbh *runner.DB, pathPrefix string, baseURL string) *UserServ
 			"phone":          "uinfo.phone",
 			"is_active":      "uinfo.is_active",
 		},
+		requiredAttrs: []string{"FirstName", "LastName", "Email"},
 	}
+}
+
+func (s *UserService) RequiredAttrs() []string {
+	return s.requiredAttrs
 }
 
 func (s *UserService) IsListMethod() bool {
@@ -351,7 +396,39 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 }
 
 func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest) (*user.User, error) {
-
+	var userId int64
+	dbcuser := s.mapAttrTodbCoreUser(r.Data.Attributes)
+	_, err := s.Dbh.InsertInto("auth_user").
+		Columns(coreUserCols...).
+		Record(dbcuser).
+		Returning("auth_user_id").QueryScalar(&userId)
+	if err != nil {
+		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+		return &user.User{}, status.Error(codes.Internal, err.Error())
+	}
+	dbusrInfo := s.mapAttrTodbUserInfo(r.Data.Attributes)
+	usrInfoCols := aphgrpc.GetDefinedTags(dbusrInfo, "db")
+	dbusrInfo.AuthUserId = userId
+	if len(usrInfoCols) > 0 {
+		_, err = s.Dbh.InsertInto("auth_user_info").
+			Columns(userInfoCols...).
+			Record(dbusrInfo).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	for _, role := range r.Data.Relationships.Roles.Data {
+		_, err = s.Dbh.InsertInto("auth_user_role").
+			Columns("auth_user_id", "auth_role_id").
+			Values(userId, role.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
+	return getSingleUserData(userId, r.Data.Attributes), nil
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest) (*user.User, error) {
@@ -494,7 +571,7 @@ func (s *UserService) getRoleResourceIdentifiers(roles []*user.Role) []*jsonapi.
 
 func (s *UserService) getSingleUserData(id int64, uattr *user.UserAttributes) *user.UserData {
 	links := aphgrpc.GenSingleResourceLink(s, id)
-	if !s.IsListMethod() {
+	if !s.IsListMethod() && s.params != nil {
 		params := s.params
 		switch {
 		case params.HasFields && params.HasIncludes:
@@ -517,7 +594,9 @@ func (s *UserService) getSingleUserData(id int64, uattr *user.UserAttributes) *u
 				},
 			},
 		},
-		Links: links,
+		Links: &jsonapi.Links{
+			Self: links,
+		},
 	}
 }
 
@@ -669,6 +748,30 @@ func (s *UserService) MapFieldsToColumns(fields []string) []string {
 		columns = append(columns, s.fieldsToColumns[v])
 	}
 	return columns
+}
+
+func (s *UserService) mapAttrTodbCoreUser(attr *user.UserAttributes) *dbCoreUser {
+	return &dbCoreUser{
+		FirstName: attr.FirstName,
+		LastName:  attr.LastName,
+		Email:     attr.Email,
+		IsActive:  attr.IsActive,
+	}
+}
+
+func (s *UserService) mapAttrTodbUserInfo(attr *user.UserAttributes) *dbUserInfo {
+	return &dbUserInfo{
+		Organization:  attr.Organization,
+		GroupName:     attr.GroupName,
+		FirstAddress:  attr.FirstAddress,
+		SecondAddress: attr.SecondAddress,
+		City:          attr.City,
+		State:         attr.State,
+		Zipcode:       attr.Zipcode,
+		Country:       attr.Country,
+		CreatedAt:     attr.CreatedAt,
+		UpdatedAt:     attr.UpdatedAt,
+	}
 }
 
 func mapUserAttributes(dusr *dbUser) *user.UserAttributes {
