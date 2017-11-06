@@ -432,7 +432,36 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest) (*user.User, error) {
-
+	dbcuser := s.mapAttrTodbCoreUser(r.Data.Attributes)
+	usrMap := aphgrpc.GetDefinedTagsWithValue(dbcuser, "db")
+	if len(usrMap) > 0 {
+		_, err := s.Dbh.Update("auth_user").SetMap(usrMap).
+			Where("auth_user_id = $1", r.Data.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	dbusrInfo := s.mapAttrTodbUserInfo(r.Data.Attributes)
+	usrInfoMap := aphgrpc.GetDefinedTagsWithValue(dbusrInfo, "db")
+	if len(usrInfoMap) > 0 {
+		_, err := s.Dbh.Update("auth_user_info").SetMap(usrInfoMap).
+			Where("auth_user_id = $1", r.Data.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	for _, role := range r.Data.Relationships.Roles.Data {
+		_, err = s.Dbh.Update("auth_user_role").
+			Set("auth_role_id", role.Id).
+			Where("auth_user_id = $1", r.Data.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	return getSingleUserData(r.Data.Id, r.Data.Attributes), nil
 }
 
 func (s *UserService) getSelectedRows(id int64) (*user.UserAttributes, error) {
