@@ -86,94 +86,40 @@ type dbUserInfo struct {
 }
 
 type UserService struct {
-	Dbh             *runner.DB
-	pathPrefix      string
-	include         []string
-	includeStr      string
-	fieldsToColumns map[string]string
-	fieldsStr       string
-	resource        string
-	baseURL         string
-	filterToColumns map[string]string
-	filterStr       string
-	params          *aphgrpc.JSONAPIParams
-	listMethod      bool
-	requiredAttrs   []string
+	*aphgrpc.Service
 }
 
 func NewUserService(dbh *runner.DB, pathPrefix string, baseURL string) *UserService {
 	return &UserService{
-		baseURL:    baseURL,
-		resource:   "users",
-		Dbh:        dbh,
-		pathPrefix: pathPrefix,
-		include:    []string{"roles"},
-		filterToColumns: map[string]string{
-			"first_name": "user.first_name",
-			"last_name":  "user.last_name",
-			"email":      "user.email",
+		&aphgrpc.Service{
+			baseURL:    baseURL,
+			resource:   "users",
+			Dbh:        dbh,
+			pathPrefix: pathPrefix,
+			include:    []string{"roles"},
+			filterToColumns: map[string]string{
+				"first_name": "user.first_name",
+				"last_name":  "user.last_name",
+				"email":      "user.email",
+			},
+			fieldsToColumns: map[string]string{
+				"first_name":     "user.first_name",
+				"last_name":      "user.last_name",
+				"email":          "user.email",
+				"organization":   "uinfo.organization",
+				"group_name":     "uinfo.group_name",
+				"first_address":  "uinfo.first_address",
+				"second_address": "uinfo.second_address",
+				"city":           "uinfo.city",
+				"state":          "uinfo.state",
+				"zipcode":        "uinfo.zipcode",
+				"country":        "uinfo.country",
+				"phone":          "uinfo.phone",
+				"is_active":      "uinfo.is_active",
+			},
+			requiredAttrs: []string{"FirstName", "LastName", "Email"},
 		},
-		fieldsToColumns: map[string]string{
-			"first_name":     "user.first_name",
-			"last_name":      "user.last_name",
-			"email":          "user.email",
-			"organization":   "uinfo.organization",
-			"group_name":     "uinfo.group_name",
-			"first_address":  "uinfo.first_address",
-			"second_address": "uinfo.second_address",
-			"city":           "uinfo.city",
-			"state":          "uinfo.state",
-			"zipcode":        "uinfo.zipcode",
-			"country":        "uinfo.country",
-			"phone":          "uinfo.phone",
-			"is_active":      "uinfo.is_active",
-		},
-		requiredAttrs: []string{"FirstName", "LastName", "Email"},
 	}
-}
-
-func (s *UserService) RequiredAttrs() []string {
-	return s.requiredAttrs
-}
-
-func (s *UserService) IsListMethod() bool {
-	return s.listMethod
-}
-
-func (s *UserService) FilterToColumns() map[string]string {
-	return s.filterToColumns
-}
-
-func (s *UserService) AllowedFilter() []string {
-	var f []string
-	for k, _ := range s.filterToColumns {
-		f = append(f, k)
-	}
-	return f
-}
-
-func (s *UserService) AllowedInclude() []string {
-	return s.include
-}
-
-func (s *UserService) AllowedFields() []string {
-	var f []string
-	for k, _ := range s.fieldsToColumns {
-		f = append(f, k)
-	}
-	return f
-}
-
-func (s *UserService) GetResourceName() string {
-	return s.resource
-}
-
-func (s *UserService) GetBaseURL() string {
-	return s.baseURL
-}
-
-func (s *UserService) GetPathPrefix() string {
-	return s.pathPrefix
 }
 
 func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user.User, error) {
@@ -790,14 +736,6 @@ func (s *UserService) getAllUsersWithRelationsAndPagination(count int64, dbUsers
 			},
 		},
 	}, nil
-}
-
-func (s *UserService) MapFieldsToColumns(fields []string) []string {
-	var columns []string
-	for _, v := range fields {
-		columns = append(columns, s.fieldsToColumns[v])
-	}
-	return columns
 }
 
 func (s *UserService) mapAttrTodbCoreUser(attr *user.UserAttributes) *dbCoreUser {
