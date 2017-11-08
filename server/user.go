@@ -469,6 +469,15 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
+	if err := s.hasUser(r.Data.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	_, err := s.Dbh.DeleteFrom("auth_user").Where("auth_user_id = $1", r.Id).Exec()
+	if err != nil {
+		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
+		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+	return &empty.Empty{}, nil
 }
 
 func (s *UserService) getSelectedRows(id int64) (*user.UserAttributes, error) {
