@@ -9,6 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -432,6 +433,9 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest) (*user.User, error) {
+	if err := s.hasUser(r.Data.Id); err != nil {
+		return &user.User{}, aphgrpc.handleError(ctx, err)
+	}
 	dbcuser := s.mapAttrTodbCoreUser(r.Data.Attributes)
 	usrMap := aphgrpc.GetDefinedTagsWithValue(dbcuser, "db")
 	if len(usrMap) > 0 {
@@ -464,6 +468,9 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 	return getSingleUserData(r.Data.Id, r.Data.Attributes), nil
 }
 
+func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
+}
+
 func (s *UserService) getSelectedRows(id int64) (*user.UserAttributes, error) {
 	dusr := new(dbUser)
 	columns := s.fieldsToColumns(s.params.Fields)
@@ -476,6 +483,11 @@ func (s *UserService) getSelectedRows(id int64) (*user.UserAttributes, error) {
 		return &user.UserAttributes{}, err
 	}
 	return mapUserAttributes(dusr), nil
+}
+
+func (s *UserService) hasUser(id int64) error {
+	return s.Dbh.Select("auth_user_id").From("auth_user").
+		Where("auth_user_id = $1", id).Exec()
 }
 
 func (s *UserService) getRow(id int64) (*user.UserAttributes, error) {
