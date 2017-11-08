@@ -106,6 +106,8 @@ func NewUserService(dbh *runner.DB, pathPrefix string, baseURL string) *UserServ
 				"first_name":     "user.first_name",
 				"last_name":      "user.last_name",
 				"email":          "user.email",
+				"created_at":     "user.created_at",
+				"updated_at":     "user.updated_at",
 				"organization":   "uinfo.organization",
 				"group_name":     "uinfo.group_name",
 				"first_address":  "uinfo.first_address",
