@@ -204,7 +204,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			s.fieldsStr = r.Fields
 			s.filterStr = r.Filter
 			s.includeStr = r.Include
-			count, err := s.getAllFilteredCount(params)
+			count, err := s.getAllFilteredCount(usrRoleJoin)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
@@ -217,7 +217,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasFields && params.HasInclude:
 			s.fieldsStr = r.Fields
 			s.includeStr = r.Include
-			count, err := s.getCount()
+			count, err := s.getCount("auth_user")
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
@@ -230,7 +230,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasFields && params.HasFilter:
 			s.fieldsStr = r.Fields
 			s.filterStr = r.Filter
-			count, err := s.getAllFilteredCount(params)
+			count, err := s.getAllFilteredCount(usrRoleJoin)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
@@ -243,7 +243,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasInclude && params.HasFilter:
 			s.includeStr = r.Include
 			s.filterStr = r.Filter
-			count, err := s.getAllFilteredCount(params)
+			count, err := s.getAllFilteredCount(usrRoleJoin)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
@@ -254,7 +254,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.getAllUsersWithRelationsAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
 		// only pagination
 		default:
-			count, err := s.getCount()
+			count, err := s.getCount("auth_user")
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
@@ -271,7 +271,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		s.fieldsStr = r.Fields
 		s.filterStr = r.Filter
 		s.includeStr = r.Include
-		count, err := s.getAllFilteredCount()
+		count, err := s.getAllFilteredCount(usrRoleJoin)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 		}
@@ -286,7 +286,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	case params.HasFields && params.HasFilter:
 		s.fieldsStr = r.Fields
 		s.filterStr = r.Filter
-		count, err := s.getAllFilteredCount(params)
+		count, err := s.getAllFilteredCount(usrRoleJoin)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 		}
@@ -301,7 +301,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	case params.HasFields && params.HasInclude:
 		s.fieldsStr = r.Fields
 		s.includeStr = r.Include
-		count, err := s.getCount()
+		count, err := s.getCount("auth_user")
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 		}
@@ -316,7 +316,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	case params.HasFilter && params.HasInclude:
 		s.includeStr = r.Include
 		s.filterStr = r.Filter
-		count, err := s.getAllFilteredCount(params)
+		count, err := s.getAllFilteredCount(usrRoleJoin)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 		}
@@ -329,7 +329,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		}
 		return s.getAllDefaultUsers()
 	default:
-		count, err := s.getCount()
+		count, err := s.getCount("auth_user")
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 		}
@@ -457,23 +457,6 @@ func (s *UserService) getRow(id int64) (*user.UserAttributes, error) {
 		return &user.UserAttributes{}, err
 	}
 	return mapUserAttributes(dusr), nil
-}
-
-func (s *UserService) getCount() (int64, error) {
-	var count int64
-	err := s.Dbh.Select("COUNT(*)").From("auth_user").QueryScalar(&count)
-	return count, err
-}
-
-func (s *UserService) getAllFilteredCount() (int64, error) {
-	var count int64
-	err := s.Dbh.Select("COUNT(*)").
-		From(usrRoleJoin).
-		Scope(
-			aphgrpc.FilterToWhereClause(s, s.params.Filter),
-			aphgrpc.FilterToBindValue(s.params.Filter)...,
-		).QueryScalar(&count)
-	return count, err
 }
 
 func (s *UserService) getAllRows() ([]*dbUser, error) {
@@ -611,51 +594,6 @@ func (s *UserService) getAllUserData([]*dbUser) []*user.UserData {
 	}
 	return udata
 
-}
-
-func (s *UserService) getPagination(record, pagenum, pagesize int64) (*jsonapi.PaginationLinks, int64) {
-	pages := aphgrpc.GetTotalPageNum(record, pagenum, pagesize)
-	pageLinks := aphgrpc.GetPaginatedLinks(s, pages, pagenum, pagesize)
-	pageType := []string{"self", "last", "first", "previous", "next"}
-	params := s.params
-	switch {
-	case params.HasFields && params.HasInclude && params.HasFilter:
-		for _, v := range pageType {
-			if _, ok := pageLinks[v]; ok {
-				pageLinks[v] += fmt.Sprintf("%s&fields=%s&include=%s&filter=%s", s.fieldsStr, s.includeStr, s.filterStr)
-			}
-		}
-	case params.HasFields && params.HasInclude:
-		for _, v := range pageType {
-			if _, ok := pageLinks[v]; ok {
-				pageLinks[v] += fmt.Sprintf("%s&fields=%s&include=%s", s.fieldsStr, s.includeStr)
-			}
-		}
-	case params.HasFields && params.HasFilter:
-		for _, v := range pageType {
-			if _, ok := pageLinks[v]; ok {
-				pageLinks[v] += fmt.Sprintf("%s&fields=%s&filter=%s", s.fieldsStr, s.filterStr)
-			}
-		}
-	case params.HasInclude && params.HasFilter:
-		for _, v := range pageType {
-			if _, ok := pageLinks[v]; ok {
-				pageLinks[v] += fmt.Sprintf("%s&include=%s&filter=%s", s.includeStr, s.filterStr)
-			}
-		}
-	}
-	jsapiLinks := jsonapi.PaginationLinks{
-		Self:  pageLinks["self"],
-		Last:  pageLinks["last"],
-		First: pageLinks["first"],
-	}
-	if _, ok := pageLinks["previous"]; ok {
-		jsapiLinks.Previous = pageLinks["previous"]
-	}
-	if _, ok := pageLinks["next"]; ok {
-		jsapiLinks.Next = pageLinks["next"]
-	}
-	return jsapiLinks, pages
 }
 
 func (s *Service) getAllDefaultUsers(dbUsers []*dbUser) ([]*user.UserCollection, error) {
