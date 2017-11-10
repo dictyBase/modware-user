@@ -551,18 +551,6 @@ func (s *UserService) getRoleResourceIdentifiers(roles []*user.Role) []*jsonapi.
 }
 
 func (s *UserService) getSingleUserData(id int64, uattr *user.UserAttributes) *user.UserData {
-	links := aphgrpc.GenSingleResourceLink(s, id)
-	if !s.IsListMethod() && s.params != nil {
-		params := s.params
-		switch {
-		case params.HasFields && params.HasIncludes:
-			links += fmt.Sprintf("?fields=%s&include=%s", s.fieldsStr, s.includeStr)
-		case params.HasFields:
-			links += fmt.Sprintf("?fields=%s", s.fieldsStr)
-		case params.HasIncludes:
-			links += fmt.Sprintf("?include=%s", s.includeStr)
-		}
-	}
 	return &user.UserData{
 		Type:       s.GetResourceName(),
 		Id:         id,
@@ -576,7 +564,7 @@ func (s *UserService) getSingleUserData(id int64, uattr *user.UserAttributes) *u
 			},
 		},
 		Links: &jsonapi.Links{
-			Self: links,
+			Self: s.genJSONAPISelfLinkWithParams(id),
 		},
 	}
 }
