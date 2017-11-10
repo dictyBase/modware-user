@@ -4,9 +4,6 @@ import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -143,7 +140,7 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
 		// included relationships
-		incRoles, err := convertAllToAny(roles)
+		incRoles, err := aphgrpc.ConvertAllToAny(roles)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -694,16 +691,4 @@ func mapUserAttributes(dusr *dbUser) *user.UserAttributes {
 		CreatedAt:     dusr.CreatedAt,
 		UpdatedAt:     dusr.UpdatedAt,
 	}
-}
-
-func convertAllToAny(msg []proto.Message) ([]*any.Any, error) {
-	as := make([]*any.Any, len(msg))
-	for i, p := range msg {
-		pkg, err := ptypes.MarshalAny(p)
-		if err != nil {
-			return as, err
-		}
-		as[i] = pkg
-	}
-	return as, nil
 }

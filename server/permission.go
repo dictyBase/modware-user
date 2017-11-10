@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/manyminds/api2go/jsonapi"
 	dat "gopkg.in/mgutz/dat.v1"
 	runner "gopkg.in/mgutz/dat.v1/sqlx-runner"
 )
@@ -116,7 +117,81 @@ func (s *PermissionService) getAllFilteredRowsWithPaging(pageNum int64, pageSize
 }
 
 func (s *PermissionService) getAllSelectedFilteredRowsWithPaging(pageNum int64, pageSize int64) ([]*dbPermission, error) {
+	var dbrows []*dbPermission
+	columns := s.MapFieldsToColumns(s.params.Fields)
+	err := s.Dbh.Select(columns...).
+		From("auth_permission").
+		Scope(
+			aphgrpc.FilterToWhereClause(s, s.params.Filter),
+			aphgrpc.FilterToBindValue(s.params.Filter)...,
+		).
+		Paginate(uint64(pageNum), uint64(pageSize)).
+		QueryStructs(dbrows)
+	return dbrows, err
+}
 
+func (s *PermissionService) getSinglePermissionResource(id int64, attr *user.PermissionAttributes) *user.Permission {
+	return &user.Permission{
+		Data: s.getSinglePermissionData(id, attr),
+	}
+}
+
+func (s *PermissionService) getAllPermissionData(dbrows []*dbPermission) []*user.PermissionData {
+	var pdata []*user.PermissionData
+	for _, dperm := range dbrows {
+		pdata = append(pdata, s.getSinglePermissionData(dperm.AuthPermissionId, mapPermissionAttributes(dperm)))
+	}
+	return pdata
+}
+
+func (s *PermissionService) getAllDefaultPermissions(dbrows []*dbPermission) ([]*user.PermissionCollection, error) {
+	dbPermissions, err := s.getAllRows()
+	if err != nil {
+		return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+	}
+	return &user.PermissionCollection{
+		Data: s.getAllPermissionData(dbrows),
+		Links: &jsonapi.PaginationLinks{
+			Self: aphgrpc.GenMultiResourceLink(s),
+		},
+	}, nil
+}
+
+func (s *PermissionService) getAllPermissions(dbrows []*dbPermission) ([]*user.PermissionCollection, error) {
+	return &user.PermissionCollection{
+		Data: s.getAllPermissionData(dbrows),
+		Links: &jsonapi.PaginationLinks{
+			Self: s.genCollectionResSelfLink(),
+		},
+	}, nil
+}
+
+func (s *PermissionService) getSinglePermissionData(id int64, attr *user.PermissionAttributes) *user.PermissionData {
+	return &user.PermissionData{
+		Type:       s.GetResourceName(),
+		Id:         id,
+		Attributes: attr,
+		Links: &jsonapi.Links{
+			Self: s.genSingularResSelfLink(id),
+		},
+	}
+}
+
+func (s *PermissionService) getAllPermissionsWithPagination(count int64, dbPermissions []*dbPermission, pagenum, pagesize int64) ([]*user.PermissionCollection, err) {
+	udata := s.getAllPermissionData(dbPermissions)
+	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
+	return &user.PermissionCollection{
+		Data:  udata,
+		Links: jsLinks,
+		Meta: &jsonapi.Meta{
+			Pagination: &jsonapi.Pagination{
+				Records: count,
+				Total:   pages,
+				Size:    pagesize,
+				Number:  pagenum,
+			},
+		},
+	}, nil
 }
 
 func mapPermissionAttributes(dperm *dbPermission) *user.PermissionAttributes {
