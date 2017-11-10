@@ -1,8 +1,6 @@
 package server
 
 import (
-	"fmt"
-
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
@@ -564,7 +562,7 @@ func (s *UserService) getSingleUserData(id int64, uattr *user.UserAttributes) *u
 			},
 		},
 		Links: &jsonapi.Links{
-			Self: s.genJSONAPISelfLinkWithParams(id),
+			Self: s.genSingularResSelfLink(id),
 		},
 	}
 }
@@ -575,7 +573,7 @@ func (s *UserService) getSingleUserResource(id int64, uattr *user.UserAttributes
 	}
 }
 
-func (s *UserService) getAllUserData([]*dbUser) []*user.UserData {
+func (s *UserService) getAllUserData(dbUsers []*dbUser) []*user.UserData {
 	var udata []*user.UserData
 	for _, dusr := range dbUsers {
 		udata = append(udata, s.getSingleUserData(dusr.AuthUserId, mapUserAttributes(dusr)))
@@ -598,22 +596,10 @@ func (s *Service) getAllDefaultUsers(dbUsers []*dbUser) ([]*user.UserCollection,
 }
 
 func (s *UserService) getAllUsers(dbUsers []*dbUser) ([]*user.UserCollection, error) {
-	link := aphgrpc.GenMultiResourceLink(s)
-	params := s.params
-	switch {
-	case params.HasFields && params.HasFilter && params.HasInclude:
-		link += fmt.Sprintf("%s&fields=%s&include=%s&filter=%s", s.fieldsStr, s.includeStr, s.filterStr)
-	case params.HasFields && params.HasFilter:
-		link += fmt.Sprintf("%s&fields=%s&filter=%s", s.fieldsStr, s.filterStr)
-	case params.HasFields && params.HasInclude:
-		link += fmt.Sprintf("%s&fields=%s&include=%s", s.fieldsStr, s.includeStr)
-	case params.HasFilter && params.HasInclude:
-		link += fmt.Sprintf("%s&fiter=%s&include=%s", s.filterStr, s.includeStr)
-	}
 	return &user.UserCollection{
 		Data: s.getAllUserData(dbUsers),
 		Links: &jsonapi.PaginationLinks{
-			Self: link,
+			Self: s.genCollectionResSelfLink(),
 		},
 	}, nil
 }
