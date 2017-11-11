@@ -131,7 +131,7 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 	case params.HasFields && params.HasInclude:
 		s.includeStr = r.Include
 		s.fieldsStr = r.Fields
-		uattr, err := s.getSelectedRows(params, r.Id)
+		u, err := s.getRowWhere(params, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -144,20 +144,19 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		u := s.getSingleUserResource(r.Id, uattr)
 		u.Included = incRoles
 		u.Relationships.Roles.Data = s.getRoleResourceIdentifiers(roles)
 		return u, nil
 	case params.HasFields:
 		s.fieldsStr = r.Fields
-		uattr, err := s.getSelectedRows(params, r.Id)
+		u, err := s.getRowWhere(params, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		return s.getSingleUserResource(r.Id, uattr), nil
+		return u, nil
 	case params.HasInclude:
 		s.includeStr = r.Include
-		uattr, err := s.getRow(r.Id)
+		u, err := s.getRow(r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -170,16 +169,15 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		u := s.getSingleUserResource(r.Id, uattr)
 		u.Included = incRoles
 		u.Relationships.Roles.Data = s.getRoleResourceIdentifiers(roles)
 		return u, nil
 	default:
-		uattr, err := s.getRow(r.Id)
+		u, err := s.getRow(r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		return s.getSingleUserResource(r.Id, uattr), nil
+		return u, nil
 	}
 }
 
@@ -423,7 +421,9 @@ func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) 
 	return &empty.Empty{}, nil
 }
 
-func (s *UserService) getSelectedRows(id int64) (*user.UserAttributes, error) {
+// All functions that retrieves data from database
+
+func (s *UserService) getRowWhere(id int64) (*user.User, error) {
 	dusr := new(dbUser)
 	columns := s.fieldsToColumns(s.params.Fields)
 	err := s.Dbh.Select(columns...).From(`
@@ -434,15 +434,15 @@ func (s *UserService) getSelectedRows(id int64) (*user.UserAttributes, error) {
 	if err != nil {
 		return &user.UserAttributes{}, err
 	}
-	return mapUserAttributes(dusr), nil
+	return s.getSingleUserResource(id, mapUserAttributes(dusr)), nil
 }
 
-func (s *UserService) hasUser(id int64) error {
+func (s *UserService) Exists(id int64) error {
 	return s.Dbh.Select("auth_user_id").From("auth_user").
 		Where("auth_user_id = $1", id).Exec()
 }
 
-func (s *UserService) getRow(id int64) (*user.UserAttributes, error) {
+func (s *UserService) getRow(id int64) (*user.User, error) {
 	dusr := new(dbUser)
 	err := s.Dbh.Select("user.*", "uinfo.*").
 		From(usrRoleJoin).
@@ -451,7 +451,7 @@ func (s *UserService) getRow(id int64) (*user.UserAttributes, error) {
 	if err != nil {
 		return &user.UserAttributes{}, err
 	}
-	return mapUserAttributes(dusr), nil
+	return s.getSingleUserResource(id, mapUserAttributes(dusr)), nil
 }
 
 func (s *UserService) getAllRows() ([]*dbUser, error) {
