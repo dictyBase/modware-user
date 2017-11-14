@@ -131,11 +131,11 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 	case params.HasFields && params.HasInclude:
 		s.includeStr = r.Include
 		s.fieldsStr = r.Fields
-		u, err := s.getRowWhere(params, r.Id)
+		u, err := s.getResourceWithSelectedAttr(params, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		roles, err := s.getRoles(id)
+		roles, err := s.getRolesResource(id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -145,22 +145,22 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
 		u.Included = incRoles
-		u.Relationships.Roles.Data = s.getRoleResourceIdentifiers(roles)
+		u.Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 		return u, nil
 	case params.HasFields:
 		s.fieldsStr = r.Fields
-		u, err := s.getRowWhere(params, r.Id)
+		u, err := s.getUserWithSelectedAttr(params, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
 		return u, nil
 	case params.HasInclude:
 		s.includeStr = r.Include
-		u, err := s.getRow(r.Id)
+		u, err := s.getResource(r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		roles, err := s.getRoles(id)
+		roles, err := s.getRolesResource(id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -170,10 +170,10 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
 		u.Included = incRoles
-		u.Relationships.Roles.Data = s.getRoleResourceIdentifiers(roles)
+		u.Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 		return u, nil
 	default:
-		u, err := s.getRow(r.Id)
+		u, err := s.getResource(r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -201,11 +201,11 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(params, r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithRelationsAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
 		// fields and includes
 		case params.HasFields && params.HasInclude:
 			s.fieldsStr = r.Fields
@@ -214,11 +214,11 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedRowsWithPaging(params, r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithRelationsAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
 		// fields and filters
 		case params.HasFields && params.HasFilter:
 			s.fieldsStr = r.Fields
@@ -231,7 +231,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize)
 		// include and filter
 		case params.HasInclude && params.HasFilter:
 			s.includeStr = r.Include
@@ -240,22 +240,22 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			dbUsers, err := s.getAllFilteredRowsWithPaging(params, r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithRelationsAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
 		// only pagination
 		default:
 			count, err := s.getCount("auth_user")
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			dbUsers, err := s.getAllRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
 		}
 	}
 	// request without any pagination query parameters
@@ -273,9 +273,9 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithRelationsAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
-		return s.getAllDefaultUsers()
+		return s.dbToCollResource(dbUsers), nil
 	case params.HasFields && params.HasFilter:
 		s.fieldsStr = r.Fields
 		s.filterStr = r.Filter
@@ -288,9 +288,9 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
-		return s.getAllDefaultUsers()
+		return s.dbToCollResource(dbUsers), nil
 	case params.HasFields && params.HasInclude:
 		s.fieldsStr = r.Fields
 		s.includeStr = r.Include
@@ -303,9 +303,9 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithRelationsAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
-		return s.getAllDefaultUsers()
+		return s.dbToCollResource(dbUsers), nil
 	case params.HasFilter && params.HasInclude:
 		s.includeStr = r.Include
 		s.filterStr = r.Filter
@@ -318,9 +318,9 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithRelationsAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
-		return s.getAllDefaultUsers()
+		return s.dbToCollResource(dbUsers), nil
 	default:
 		count, err := s.getCount("auth_user")
 		if err != nil {
@@ -331,15 +331,15 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 			}
-			return s.getAllUsersWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
-		return s.getAllDefaultUsers()
+		return s.dbToCollResource(dbUsers), nil
 	}
 }
 
 func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest) (*user.User, error) {
 	var userId int64
-	dbcuser := s.mapAttrTodbCoreUser(r.Data.Attributes)
+	dbcuser := s.attrTodbCoreUser(r.Data.Attributes)
 	_, err := s.Dbh.InsertInto("auth_user").
 		Columns(coreUserCols...).
 		Record(dbcuser).
@@ -348,7 +348,7 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
 		return &user.User{}, status.Error(codes.Internal, err.Error())
 	}
-	dbusrInfo := s.mapAttrTodbUserInfo(r.Data.Attributes)
+	dbusrInfo := s.attrTodbUserInfo(r.Data.Attributes)
 	usrInfoCols := aphgrpc.GetDefinedTags(dbusrInfo, "db")
 	dbusrInfo.AuthUserId = userId
 	if len(usrInfoCols) > 0 {
@@ -374,10 +374,10 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest) (*user.User, error) {
-	if err := s.hasUser(r.Data.Id); err != nil {
+	if err := s.existsResource(r.Data.Id); err != nil {
 		return &user.User{}, aphgrpc.handleError(ctx, err)
 	}
-	dbcuser := s.mapAttrTodbCoreUser(r.Data.Attributes)
+	dbcuser := s.attrTodbCoreUser(r.Data.Attributes)
 	usrMap := aphgrpc.GetDefinedTagsWithValue(dbcuser, "db")
 	if len(usrMap) > 0 {
 		_, err := s.Dbh.Update("auth_user").SetMap(usrMap).
@@ -387,7 +387,7 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 			return &user.User{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	dbusrInfo := s.mapAttrTodbUserInfo(r.Data.Attributes)
+	dbusrInfo := s.attrTodbUserInfo(r.Data.Attributes)
 	usrInfoMap := aphgrpc.GetDefinedTagsWithValue(dbusrInfo, "db")
 	if len(usrInfoMap) > 0 {
 		_, err := s.Dbh.Update("auth_user_info").SetMap(usrInfoMap).
@@ -406,11 +406,11 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 			return &user.User{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	return getSingleUserData(r.Data.Id, r.Data.Attributes), nil
+	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
-	if err := s.hasUser(r.Data.Id); err != nil {
+	if err := s.existsResource(r.Data.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
 	}
 	_, err := s.Dbh.DeleteFrom("auth_user").Where("auth_user_id = $1", r.Id).Exec()
@@ -421,38 +421,39 @@ func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) 
 	return &empty.Empty{}, nil
 }
 
-// All functions that retrieves data from database
+// All helper functions
 
-func (s *UserService) getRowWhere(id int64) (*user.User, error) {
-	dusr := new(dbUser)
-	columns := s.fieldsToColumns(s.params.Fields)
-	err := s.Dbh.Select(columns...).From(`
-			auth_user user
-			JOIN auth_user_info uinfo
-			ON user.auth_user_id = uinfo.auth_user_id
-		`).Where("user.auth_user_id = $1", id).QueryStruct(dusr)
-	if err != nil {
-		return &user.UserAttributes{}, err
-	}
-	return s.getSingleUserResource(id, mapUserAttributes(dusr)), nil
-}
-
-func (s *UserService) Exists(id int64) error {
+func (s *UserService) existsResource(id int64) error {
 	return s.Dbh.Select("auth_user_id").From("auth_user").
 		Where("auth_user_id = $1", id).Exec()
 }
 
-func (s *UserService) getRow(id int64) (*user.User, error) {
+// -- Functions that queries the storage and generates an user resource object
+
+func (s *UserService) getResourceWithSelectedAttr(id int64) (*user.User, error) {
+	dusr := new(dbUser)
+	columns := s.fieldsToColumns(s.params.Fields)
+	err := s.Dbh.Select(columns...).From(usrRoleJoin).
+		Where("user.auth_user_id = $1", id).QueryStruct(dusr)
+	if err != nil {
+		return &user.User{}, err
+	}
+	return s.buildResource(id, s.dbToResourceAttributes(dusr)), nil
+}
+
+func (s *UserService) getResource(id int64) (*user.User, error) {
 	dusr := new(dbUser)
 	err := s.Dbh.Select("user.*", "uinfo.*").
 		From(usrRoleJoin).
 		Where("user.auth_user_id = $1", id).
 		QueryStruct(dusr)
 	if err != nil {
-		return &user.UserAttributes{}, err
+		return &user.User{}, err
 	}
-	return s.getSingleUserResource(id, mapUserAttributes(dusr)), nil
+	return s.buildResource(id, s.dbToResourceAttributes(dusr)), nil
 }
+
+// -- Functions that queries the storage and generates a database user object
 
 func (s *UserService) getAllRows() ([]*dbUser, error) {
 	var dusrRows []*dbUser
@@ -462,11 +463,11 @@ func (s *UserService) getAllRows() ([]*dbUser, error) {
 	return dusrRows, err
 }
 
-func (s *UserService) getAllRowsWithPaging(pageNum int64, pageSize int64) ([]*dbUser, error) {
+func (s *UserService) getAllRowsWithPaging(pagenum int64, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
 	err := s.Dbh.Select("user.*", "uinfo.*").
 		From(usrRoleJoin).
-		Paginate(uint64(pageNum), uint64(pageSize)).
+		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dusrRows)
 	return dusrRows, err
 }
@@ -508,7 +509,9 @@ func (s *UserService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int
 	return dusrRows, err
 }
 
-func (s *UserService) getRoles(id int64) ([]*user.RoleData, error) {
+// -- Functions that returns relationship resource objects
+
+func (s *UserService) getRolesResource(id int64) ([]*user.RoleData, error) {
 	var drole []*dbRole
 	err := s.Dbh.Select("role.*").From(`
 			auth_user_role
@@ -534,7 +537,7 @@ func (s *UserService) getRoles(id int64) ([]*user.RoleData, error) {
 	return rdata, nil
 }
 
-func (s *UserService) getRoleResourceIdentifiers(roles []*user.Role) []*jsonapi.Data {
+func (s *UserService) buildRoleResourceIdentifiers(roles []*user.Role) []*jsonapi.Data {
 	jdata := make([]*jsonapi.Data, len(roles))
 	for i, r := range roles {
 		jdata[i] = &jsonapi.Data{
@@ -545,7 +548,9 @@ func (s *UserService) getRoleResourceIdentifiers(roles []*user.Role) []*jsonapi.
 	return jdata
 }
 
-func (s *UserService) getSingleUserData(id int64, uattr *user.UserAttributes) *user.UserData {
+// -- Functions that builds up the various parts of the final user resource objects
+
+func (s *UserService) buildResourceData(id int64, uattr *user.UserAttributes) *user.UserData {
 	return &user.UserData{
 		Type:       s.GetResourceName(),
 		Id:         id,
@@ -564,45 +569,55 @@ func (s *UserService) getSingleUserData(id int64, uattr *user.UserAttributes) *u
 	}
 }
 
-func (s *UserService) getSingleUserResource(id int64, uattr *user.UserAttributes) *user.User {
+func (s *UserService) buildResource(id int64, uattr *user.UserAttributes) *user.User {
 	return &user.User{
-		Data: s.getSingleUserData(id, uattr),
+		Data: s.buildResourceData(id, uattr),
 	}
 }
 
-func (s *UserService) getAllUserData(dbUsers []*dbUser) []*user.UserData {
+// -- Functions that generates various user resource objects from
+//    database user object.
+
+func (s *UserService) dbToResourceAttributes(dusr *dbUser) *user.UserAttributes {
+	return &user.UserAttributes{
+		FirstName:     dusr.FirstName,
+		LastName:      dusr.LastName,
+		Email:         dusr.Email,
+		IsActive:      dusr.IsActive,
+		Organization:  dusr.Organization,
+		GroupName:     dusr.GroupName,
+		FirstAddress:  dusr.FirstAddress,
+		SecondAddress: dusr.SecondAddress,
+		City:          dusr.City,
+		State:         dusr.State,
+		Zipcode:       dusr.Zipcode,
+		Country:       dusr.Country,
+		Phone:         dusr.Phone,
+		CreatedAt:     dusr.CreatedAt,
+		UpdatedAt:     dusr.UpdatedAt,
+	}
+}
+
+func (s *UserService) dbToCollResourceData(dbUsers []*dbUser) []*user.UserData {
 	var udata []*user.UserData
 	for _, dusr := range dbUsers {
-		udata = append(udata, s.getSingleUserData(dusr.AuthUserId, mapUserAttributes(dusr)))
+		udata = append(udata, s.buildResourceData(dusr.AuthUserId, s.dbToResourceAttributes(dusr)))
 	}
 	return udata
 
 }
 
-func (s *Service) getAllDefaultUsers(dbUsers []*dbUser) ([]*user.UserCollection, error) {
-	dbUsers, err := s.getAllRows()
-	if err != nil {
-		return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
-	}
+func (s *UserService) dbToCollResource(dbUsers []*dbUser) (*user.UserCollection, error) {
 	return &user.UserCollection{
-		Data: s.getAllUserData(dbUsers),
+		Data: s.dbToCollResourceData(dbUsers),
 		Links: &jsonapi.PaginationLinks{
-			Self: aphgrpc.GenMultiResourceLink(s),
+			Self: s.genCollResourceSelfLink(),
 		},
 	}, nil
 }
 
-func (s *UserService) getAllUsers(dbUsers []*dbUser) ([]*user.UserCollection, error) {
-	return &user.UserCollection{
-		Data: s.getAllUserData(dbUsers),
-		Links: &jsonapi.PaginationLinks{
-			Self: s.genCollectionResSelfLink(),
-		},
-	}, nil
-}
-
-func (s *UserService) getAllUsersWithPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) ([]*user.UserCollection, err) {
-	udata := s.getAllUserData(dbUsers)
+func (s *UserService) dbToCollResourceWithPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) (*user.UserCollection, err) {
+	udata := s.dbToCollResourceData(dbUsers)
 	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
 	return &user.UserCollection{
 		Data:  udata,
@@ -618,15 +633,15 @@ func (s *UserService) getAllUsersWithPagination(count int64, dbUsers []*dbUser, 
 	}, nil
 }
 
-func (s *UserService) getAllUsersWithRelationsAndPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) ([]*user.UserCollection, err) {
-	udata := s.getAllUserData(dbUsers)
+func (s *UserService) dbToCollResourceWithRelAndPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) (*user.UserCollection, err) {
+	udata := s.dbToCollResourceData(dbUsers)
 	var allRoles []*user.Role
 	for i, _ := range udata {
 		roles, err := s.getRoles(dbUsers[i].AuthUserId)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 		}
-		udata[i].Relationships.Roles.Data = s.getRoleResourceIdentifiers(roles)
+		udata[i].Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 		allRoles = append(allRoles, roles...)
 	}
 	incRoles, err := convertAllToAny(allRoles)
@@ -649,7 +664,9 @@ func (s *UserService) getAllUsersWithRelationsAndPagination(count int64, dbUsers
 	}, nil
 }
 
-func (s *UserService) mapAttrTodbCoreUser(attr *user.UserAttributes) *dbCoreUser {
+// -- Various utility functions
+
+func (s *UserService) attrTodbCoreUser(attr *user.UserAttributes) *dbCoreUser {
 	return &dbCoreUser{
 		FirstName: attr.FirstName,
 		LastName:  attr.LastName,
@@ -658,7 +675,7 @@ func (s *UserService) mapAttrTodbCoreUser(attr *user.UserAttributes) *dbCoreUser
 	}
 }
 
-func (s *UserService) mapAttrTodbUserInfo(attr *user.UserAttributes) *dbUserInfo {
+func (s *UserService) attrTodbUserInfo(attr *user.UserAttributes) *dbUserInfo {
 	return &dbUserInfo{
 		Organization:  attr.Organization,
 		GroupName:     attr.GroupName,
@@ -670,25 +687,5 @@ func (s *UserService) mapAttrTodbUserInfo(attr *user.UserAttributes) *dbUserInfo
 		Country:       attr.Country,
 		CreatedAt:     attr.CreatedAt,
 		UpdatedAt:     attr.UpdatedAt,
-	}
-}
-
-func mapUserAttributes(dusr *dbUser) *user.UserAttributes {
-	return &user.UserAttributes{
-		FirstName:     dusr.FirstName,
-		LastName:      dusr.LastName,
-		Email:         dusr.Email,
-		IsActive:      dusr.IsActive,
-		Organization:  dusr.Organization,
-		GroupName:     dusr.GroupName,
-		FirstAddress:  dusr.FirstAddress,
-		SecondAddress: dusr.SecondAddress,
-		City:          dusr.City,
-		State:         dusr.State,
-		Zipcode:       dusr.Zipcode,
-		Country:       dusr.Country,
-		Phone:         dusr.Phone,
-		CreatedAt:     dusr.CreatedAt,
-		UpdatedAt:     dusr.UpdatedAt,
 	}
 }
