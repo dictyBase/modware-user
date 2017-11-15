@@ -14,6 +14,10 @@ import (
 	runner "gopkg.in/mgutz/dat.v1/sqlx-runner"
 )
 
+const (
+	permDbTable = "auth_permission"
+)
+
 var permissionCols = []string{
 	"permission",
 	"description",
@@ -52,6 +56,128 @@ func NewPermissionService(dbh *runner.DB, pathPrefix string, baseURL string) *Pe
 			},
 			requiredAttrs: []string{"Permission"},
 		},
+	}
+}
+
+func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.ListRequest) (*user.PermissionCollection, error) {
+	params, md, err := aphgrpc.ValidateAndParseListParams(s, r)
+	if err != nil {
+		grpc.SetTrailer(ctx, md)
+		return &user.PermissionCollection{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	s.params = params
+	s.listMethod = true
+	// has pagination query parameters
+	if aphgrpc.HasPagination {
+		switch {
+		// fields and filters
+		case params.HasFields && params.HasFilter:
+			s.fieldsStr = r.Fields
+			s.filterStr = r.Filter
+			count, err := s.getAllFilteredCount(permDbTable)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbrows, err := s.getAllSelectedFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize)
+		// fields only
+		case params.HasFields:
+			s.fieldsStr = r.Fields
+			count, err := s.getCount(permDbTable)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbrows, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize)
+		// filters only
+		case params.HasFilter:
+			s.filterStr = r.Filter
+			count, err := s.getAllFilteredCount(permDbTable)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbrows, err := s.getAllFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize)
+		// only pagination
+		default:
+			count, err := s.getCount(permDbTable)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbrows, err := s.getAllRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize), nil
+		}
+	}
+	// request without any pagination query parameters
+	switch {
+	case params.HasFields && params.HasFilter:
+		s.fieldsStr = r.Fields
+		s.filterStr = r.Filter
+		count, err := s.getAllFilteredCount(permDbTable)
+		if err != nil {
+			return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbrows, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbrows), nil
+	case params.HasFields:
+		s.fieldsStr = r.Fields
+		count, err := s.getCount(permDbTable)
+		if err != nil {
+			return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbrows, err := s.getAllSelectedRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbrows), nil
+	case params.HasFilter:
+		s.filterStr = r.Filter
+		count, err := s.getAllFilteredCount(permDbTable)
+		if err != nil {
+			return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbrows, err := s.getAllFilteredRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbrows), nil
+	default:
+		count, err := s.getCount(permDbTable)
+		if err != nil {
+			return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbrows, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbrows), nil
 	}
 }
 
