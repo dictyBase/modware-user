@@ -49,31 +49,33 @@ func NewPermissionService(dbh *runner.DB, pathPrefix string, baseURL string) *Pe
 	}
 }
 
-func (s *PermissionService) getSelectedRows(id int64) (*user.PermissionAttributes, error) {
+// All helper functions
+
+func (s *PermissionService) existsResource(id int64) error {
+	return s.Dbh.Select("auth_permission_id").From("auth_permission").
+		Where("auth_permission_id = $1", id).Exec()
+}
+
+func (s *PermissionService) getResourceWithSelectedAttr(id int64) (*user.Permission, error) {
 	dperm := &dbPermission{}
 	columns := s.fieldsToColumns(s.params.Fields)
 	err := s.Dbh.Select(columns...).
 		From("auth_permission perm").
 		Where("perm.auth_permission_id = $1", id).QueryStruct(dperm)
 	if err != nil {
-		return &user.PermissionAttributes{}, err
+		return &user.Permission{}, err
 	}
-	return mapPermissionAttributes(dperm), nil
+	return s.buildResource(id, s.dbToResourceAttributes(dperm)), nil
 }
 
-func (s *PermissionService) hasPermission(id int64) error {
-	return s.Dbh.Select("auth_permission_id").From("auth_permission").
-		Where("auth_permission_id = $1", id).Exec()
-}
-
-func (s *PermissionService) getRow(id int64) (*user.PermissionAttributes, error) {
+func (s *PermissionService) getResource(id int64) (*user.Permission, error) {
 	dperm := &dbPermission{}
 	err := s.Dbh.Select("perm.*").From("auth_permission").
 		Where("auth_permission_id = $1", id).QueryStruct(dperm)
 	if err != nil {
-		return &user.PermissionAttributes{}, err
+		return &user.Permission{}, err
 	}
-	return mapPermissionAttributes(dperm), nil
+	return s.buildResource(id, s.dbToResourceAttributes(dperm)), nil
 }
 
 func (s *PermissionService) getAllRows() ([]*dbPermission, error) {
@@ -130,43 +132,7 @@ func (s *PermissionService) getAllSelectedFilteredRowsWithPaging(pageNum int64, 
 	return dbrows, err
 }
 
-func (s *PermissionService) getSinglePermissionResource(id int64, attr *user.PermissionAttributes) *user.Permission {
-	return &user.Permission{
-		Data: s.getSinglePermissionData(id, attr),
-	}
-}
-
-func (s *PermissionService) getAllPermissionData(dbrows []*dbPermission) []*user.PermissionData {
-	var pdata []*user.PermissionData
-	for _, dperm := range dbrows {
-		pdata = append(pdata, s.getSinglePermissionData(dperm.AuthPermissionId, mapPermissionAttributes(dperm)))
-	}
-	return pdata
-}
-
-func (s *PermissionService) getAllDefaultPermissions(dbrows []*dbPermission) ([]*user.PermissionCollection, error) {
-	dbPermissions, err := s.getAllRows()
-	if err != nil {
-		return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
-	}
-	return &user.PermissionCollection{
-		Data: s.getAllPermissionData(dbrows),
-		Links: &jsonapi.PaginationLinks{
-			Self: aphgrpc.GenMultiResourceLink(s),
-		},
-	}, nil
-}
-
-func (s *PermissionService) getAllPermissions(dbrows []*dbPermission) ([]*user.PermissionCollection, error) {
-	return &user.PermissionCollection{
-		Data: s.getAllPermissionData(dbrows),
-		Links: &jsonapi.PaginationLinks{
-			Self: s.genCollectionResSelfLink(),
-		},
-	}, nil
-}
-
-func (s *PermissionService) getSinglePermissionData(id int64, attr *user.PermissionAttributes) *user.PermissionData {
+func (s *PermissionService) buildResourceData(id int64, attr *user.PermissionAttributes) *user.PermissionData {
 	return &user.PermissionData{
 		Type:       s.GetResourceName(),
 		Id:         id,
@@ -177,8 +143,40 @@ func (s *PermissionService) getSinglePermissionData(id int64, attr *user.Permiss
 	}
 }
 
-func (s *PermissionService) getAllPermissionsWithPagination(count int64, dbPermissions []*dbPermission, pagenum, pagesize int64) ([]*user.PermissionCollection, err) {
-	udata := s.getAllPermissionData(dbPermissions)
+func (s *PermissionService) buildResource(id int64, attr *user.PermissionAttributes) *user.Permission {
+	return &user.Permission{
+		Data: s.buildResourceData(id, attr),
+	}
+}
+
+func (s *PermissionService) dbToResourceAttributes(dperm *dbPermission) *user.PermissionAttributes {
+	return &user.PermissionAttributes{
+		Permission:  dperm.Permission,
+		Description: dperm.Description,
+		CreatedAt:   dperm.CreatedAt,
+		UpdatedAt:   dperm.UpdatedAt,
+	}
+}
+
+func (s *PermissionService) dbToCollResourceData(dbrows []*dbPermission) *user.PermissionData {
+	var pdata []*user.PermissionData
+	for _, dperm := range dbrows {
+		pdata = append(pdata, s.buildResourceData(dperm.AuthPermissionId, mapPermissionAttributes(dperm)))
+	}
+	return pdata
+}
+
+func (s *PermissionService) dbToCollResource(dbrows []*dbPermission) (*user.PermissionCollection, error) {
+	return &user.PermissionCollection{
+		Data: s.dbToCollResourceData(dbrows),
+		Links: &jsonapi.PaginationLinks{
+			Self: s.genCollectionResSelfLink(),
+		},
+	}, nil
+}
+
+func (s *PermissionService) dbToCollResourceWithPagination(count int64, dbPermissions []*dbPermission, pagenum, pagesize int64) (*user.PermissionCollection, err) {
+	udata := s.dbToCollResourceData(dbPermissions)
 	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
 	return &user.PermissionCollection{
 		Data:  udata,
@@ -192,13 +190,4 @@ func (s *PermissionService) getAllPermissionsWithPagination(count int64, dbPermi
 			},
 		},
 	}, nil
-}
-
-func mapPermissionAttributes(dperm *dbPermission) *user.PermissionAttributes {
-	return &user.PermissionAttributes{
-		Permission:  dperm.Permission,
-		Description: dperm.Description,
-		CreatedAt:   dperm.CreatedAt,
-		UpdatedAt:   dperm.UpdatedAt,
-	}
 }
