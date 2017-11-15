@@ -55,6 +55,23 @@ func NewPermissionService(dbh *runner.DB, pathPrefix string, baseURL string) *Pe
 	}
 }
 
+func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.UpdatePermissionRequest) (*user.Permission, error) {
+	if err := s.existsResource(r.Data.Id); err != nil {
+		return &user.Permission{}, aphgrpc.handleError(ctx, err)
+	}
+	dbperm := s.attrTodbPermission(r.Data.Attributes)
+	permMap := aphgrpc.GetDefinedTagsWithValue(dbperm, "db")
+	if len(permMap) > 0 {
+		_, err := s.Dbh.Update("auth_permission").SetMap(permMap).
+			Where("auth_permission_id = $1", r.Data.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
+}
+
 func (s *PermissionService) DeletePermission(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
@@ -173,6 +190,15 @@ func (s *PermissionService) dbToResourceAttributes(dperm *dbPermission) *user.Pe
 		Description: dperm.Description,
 		CreatedAt:   dperm.CreatedAt,
 		UpdatedAt:   dperm.UpdatedAt,
+	}
+}
+
+func (s *PermissionService) attrTodbPermission(attr *user.PermissionAttributes) *dbPermission {
+	return &dbPermission{
+		Permission:  attr.Permission,
+		Description: attr.Description,
+		CreatedAt:   attr.CreatedAt,
+		UpdatedAt:   attr.UpdatedAt,
 	}
 }
 
