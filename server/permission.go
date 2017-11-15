@@ -1,9 +1,15 @@
 package server
 
 import (
+	"context"
+
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/manyminds/api2go/jsonapi"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	dat "gopkg.in/mgutz/dat.v1"
 	runner "gopkg.in/mgutz/dat.v1/sqlx-runner"
 )
@@ -47,6 +53,18 @@ func NewPermissionService(dbh *runner.DB, pathPrefix string, baseURL string) *Pe
 			requiredAttrs: []string{"Permission"},
 		},
 	}
+}
+
+func (s *PermissionService) DeletePermission(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
+	if err := s.existsResource(r.Data.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	_, err := s.Dbh.DeleteFrom("auth_permission").Where("auth_permission_id = $1", r.Id).Exec()
+	if err != nil {
+		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
+		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+	return &empty.Empty{}, nil
 }
 
 // All helper functions
