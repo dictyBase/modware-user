@@ -72,6 +72,12 @@ func (s *RoleService) buildResourceData(id int64, attr *user.RoleAttributes) *us
 	}
 }
 
+func (s *RoleService) buildResource(id int64, attr *user.RoleAttributes) *user.Role {
+	return &user.Role{
+		Data: s.buildResourceData(id, attr),
+	}
+}
+
 func (s *RoleService) dbToResourceAttributes(drole *dbRole) *user.RoleAttributes {
 	return &user.RoleAttributes{
 		Role:        drole.Role,
