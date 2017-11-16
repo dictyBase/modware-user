@@ -136,7 +136,7 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		roles, err := s.getRolesResource(id)
+		roles, err := s.getRoleResourceData(id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -161,7 +161,7 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		roles, err := s.getRolesResource(id)
+		roles, err := s.getRoleResourceData(id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -587,7 +587,7 @@ func (s *UserService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int
 
 // -- Functions that returns relationship resource objects
 
-func (s *UserService) getRolesResource(id int64) ([]*user.RoleData, error) {
+func (s *UserService) getRoleResourceData(id int64) ([]*user.RoleData, error) {
 	var drole []*dbRole
 	err := s.Dbh.Select("role.*").From(`
 			auth_user_role
@@ -713,7 +713,7 @@ func (s *UserService) dbToCollResourceWithRelAndPagination(count int64, dbUsers 
 	udata := s.dbToCollResourceData(dbUsers)
 	var allRoles []*user.Role
 	for i, _ := range udata {
-		roles, err := s.getRolesResource(dbUsers[i].AuthUserId)
+		roles, err := s.getRoleResourceData(dbUsers[i].AuthUserId)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 		}
