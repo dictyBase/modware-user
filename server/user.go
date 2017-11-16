@@ -21,7 +21,7 @@ const (
 			JOIN auth_user_info uinfo
 			ON user.auth_user_id = uinfo.auth_user_id
 	`
-	userDbTable = "auth_user"
+	userDbTable = "auth_user user"
 )
 
 var coreUserCols = []string{"first_name", "last_name", "email"}
@@ -489,7 +489,7 @@ func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) 
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
 	}
-	_, err := s.Dbh.DeleteFrom("auth_user").Where("auth_user_id = $1", r.Id).Exec()
+	_, err := s.Dbh.DeleteFrom(userDbTable).Where("user.auth_user_id = $1", r.Id).Exec()
 	if err != nil {
 		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
@@ -500,8 +500,8 @@ func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) 
 // All helper functions
 
 func (s *UserService) existsResource(id int64) error {
-	return s.Dbh.Select("auth_user_id").From("auth_user").
-		Where("auth_user_id = $1", id).Exec()
+	return s.Dbh.Select("user.auth_user_id").From(userDbTable).
+		Where("user.auth_user_id = $1", id).Exec()
 }
 
 // -- Functions that queries the storage and generates an user resource object
