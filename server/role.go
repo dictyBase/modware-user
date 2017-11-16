@@ -48,6 +48,11 @@ func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleServ
 	}
 }
 
+func (s *RoleService) existsResource(id int64) error {
+	return s.Dbh.Select("auth_role_id").From("auth_role").
+		Where("auth_role_id = $1", id).Exec()
+}
+
 func (s *RoleService) getResourceWithSelectedAttr(id int64) (*user.Role, error) {
 	drole := &dbRole{}
 	columns := s.fieldsToColumns(s.params.Fields)
