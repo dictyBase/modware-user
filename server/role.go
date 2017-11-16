@@ -48,6 +48,67 @@ func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleServ
 	}
 }
 
+func (s *RoleService) getPermissionResourceData(id int64) ([]*user.PermissionData, error) {
+	var dbrows []*dbPermission
+	var pdata []*user.PermissionData
+	err := s.Dbh.Select("perm.*").From(`
+			auth_role_permission
+			JOIN permission perm
+			ON auth_role_permission.auth_permission_id = perm.permission_id
+		`).Where("auth_role_permission.auth_role_id = $1", id).
+		QueryStruct(dbrows)
+	if err != nil {
+		return pdata, err
+	}
+	return NewPermissionService(
+		s.Dbh,
+		s.GetPathPrefix(),
+		s.GetBaseURL(),
+	).dbToCollResourceData(dbrows), nil
+}
+
+func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
+	var dbrows []*dbUser
+	var udata []*user.UserData
+	err := s.Dbh.Select("user.*", "uinfo.*").From(`
+		auth_user_role
+		JOIN auth_user user
+		ON auth_user_role.auth_user_id = user.auth_user_id
+		JOIN auth_user_info uinfo
+		ON uinfo.auth_user_id = user.auth_user_id
+	`).Where("auth_user_role.auth_role_id = $1", id).QueryStruct(dbrows)
+	if err != nil {
+		return udata, err
+	}
+	return NewUserService(
+		s.Dbh,
+		s.GetPathPrefix(),
+		s.GetBaseURL(),
+	).dbToCollResourceData(dbrows), nil
+}
+
+func (s *RoleService) buildUserResourceIdentifiers(users []*user.User) []*jsonapi.Data {
+	jdata := make([]*jsonapi.Data, len(users))
+	for i, r := range users {
+		jdata[i] = &jsonapi.Data{
+			Type: r.Type,
+			Id:   r.Id,
+		}
+	}
+	return jdata
+}
+
+func (s *RoleService) buildPermissionResourceIdentifiers(perms []*user.Permission) []*jsonapi.Data {
+	jdata := make([]*jsonapi.Data, len(perms))
+	for i, r := range perms {
+		jdata[i] = &jsonapi.Data{
+			Type: r.Type,
+			Id:   r.Id,
+		}
+	}
+	return jdata
+}
+
 func (s *RoleService) buildResourceData(id int64, attr *user.RoleAttributes) *user.RoleData {
 	return &user.RoleData{
 		Type:       s.GetResourceName(),
@@ -127,7 +188,7 @@ func (s *RoleService) dbToCollResourceWithRelAndPagination(count int64, dbrows [
 	// related users
 	var users []*user.User
 	for i, _ := range rdata {
-		u, err := s.getUserResource(dbrows[i].AuthRoleId)
+		u, err := s.getUserResourceData(dbrows[i].AuthRoleId)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
 		}
@@ -141,7 +202,7 @@ func (s *RoleService) dbToCollResourceWithRelAndPagination(count int64, dbrows [
 	// related permissions
 	var perms []*user.Permission
 	for i, _ := range rdata {
-		p, err := s.getPermissionResource(dbrows[i].AuthRoleId)
+		p, err := s.getPermissionResourceData(dbrows[i].AuthRoleId)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
 		}

@@ -589,6 +589,7 @@ func (s *UserService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int
 
 func (s *UserService) getRoleResourceData(id int64) ([]*user.RoleData, error) {
 	var drole []*dbRole
+	var rdata []*user.RoleData
 	err := s.Dbh.Select("role.*").From(`
 			auth_user_role
 			JOIN auth_role role
@@ -597,20 +598,7 @@ func (s *UserService) getRoleResourceData(id int64) ([]*user.RoleData, error) {
 	if err != nil {
 		return &user.RoleAttributes, err
 	}
-	rsrv := NewRoleService(s.Dbh, s.GetPathPrefix(), s.GetBaseURL())
-	var rdata []*user.RoleData
-	for _, dr := range drole {
-		rd := &User.RoleData{
-			Type:       rsrv.GetResourceName(),
-			Id:         dr.AuthRoleId,
-			Attributes: mapRoleAttributes(dr),
-			Links: &jsonapi.Links{
-				Self: aphgrpc.GenSingleResourceLink(rsrv, dr.AuthRoleId),
-			},
-		}
-		rdata = append(rdata, rd)
-	}
-	return rdata, nil
+	return NewRoleService(s.Dbh, s.GetPathPrefix(), s.GetBaseURL()).dbToCollResourceData(drole), nil
 }
 
 func (s *UserService) buildRoleResourceIdentifiers(roles []*user.Role) []*jsonapi.Data {
