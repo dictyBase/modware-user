@@ -1,10 +1,13 @@
 package server
 
 import (
+	"context"
+
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/golang/protobuf/ptypes/empty"
 	dat "gopkg.in/mgutz/dat.v1"
 	runner "gopkg.in/mgutz/dat.v1/sqlx-runner"
 )
@@ -46,6 +49,18 @@ func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleServ
 			requiredAttrs: []string{"Role"},
 		},
 	}
+}
+
+func (s *RoleService) DeleteRole(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
+	if err := s.existsResource(r.Data.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	_, err := s.Dbh.DeleteFrom("auth_role").Where("auth_role_id = $1", r.Id).Exec()
+	if err != nil {
+		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
+		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+	return &empty.Empty{}, nil
 }
 
 func (s *RoleService) existsResource(id int64) error {
