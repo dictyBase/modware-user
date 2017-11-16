@@ -166,7 +166,7 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
 		// included relationships
-		incRoles, err := convertAllToAny(roles)
+		incRoles, err := aphgrpc.ConvertAllToAny(roles)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -720,7 +720,7 @@ func (s *UserService) dbToCollResourceWithRelAndPagination(count int64, dbUsers 
 		udata[i].Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 		allRoles = append(allRoles, roles...)
 	}
-	incRoles, err := convertAllToAny(allRoles)
+	incRoles, err := aphgrpc.ConvertAllToAny(allRoles)
 	if err != nil {
 		return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
 	}
