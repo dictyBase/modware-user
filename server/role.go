@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	roleDbTable = "auth_role"
+	roleDbTable = "auth_role role"
 )
 
 type dbRole struct {
@@ -46,6 +46,60 @@ func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleServ
 			requiredAttrs: []string{"Role"},
 		},
 	}
+}
+
+func (s *RoleService) getAllRows() ([]*dbRole, error) {
+	var dbrows []*dbRole
+	err := s.Dbh.Select("role.*").
+		From(roleDbTable).
+		QueryStructs(dbrows)
+	return dbrows, err
+}
+
+func (s *RoleService) getAllRowsWithPaging(pagenum int64, pagesize int64) ([]*dbRole, error) {
+	var dbrows []*dbRole
+	err := s.Dbh.Select("role.*").
+		From(roleDbTable).
+		Paginate(uint64(pagenum), uint64(pagesize)).
+		QueryStructs(dbrows)
+	return dbrows, err
+}
+
+func (s *RoleService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
+	var dbrows []*dbRole
+	columns := s.MapFieldsToColumns(s.params.Fields)
+	err := s.Dbh.Select(columns...).
+		From(roleDbTable).
+		Paginate(uint64(pageNum), uint64(pageSize)).
+		QueryStructs(dbrows)
+	return dbrows, err
+}
+
+func (s *RoleService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
+	var dbrows []*dbRole
+	err := s.Dbh.Select("role.*").
+		From(roleDbTable).
+		Scope(
+			aphgrpc.FilterToWhereClause(s, s.params.Filter),
+			aphgrpc.FilterToBindValue(s.params.Filter)...,
+		).
+		Paginate(uint64(pageNum), uint64(pageSize)).
+		QueryStructs(dbrows)
+	return dbrows, err
+}
+
+func (s *RoleService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
+	var dbrows []*dbRole
+	columns := s.MapFieldsToColumns(s.params.Fields)
+	err := s.Dbh.Select(columns...).
+		From(roleDbTable).
+		Scope(
+			aphgrpc.FilterToWhereClause(s, s.params.Filter),
+			aphgrpc.FilterToBindValue(s.params.Filter)...,
+		).
+		Paginate(uint64(pageNum), uint64(pageSize)).
+		QueryStructs(dbrows)
+	return dbrows, err
 }
 
 func (s *RoleService) getPermissionResourceData(id int64) ([]*user.PermissionData, error) {
