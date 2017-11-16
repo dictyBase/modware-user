@@ -634,8 +634,8 @@ func (s *UserService) buildResourceData(id int64, uattr *user.UserAttributes) *u
 		Relationships: &user.ExistingUserRelationships{
 			Roles: &user.ExistingUserRelationships_Roles{
 				Links: &jsonapi.Links{
-					Self:    aphgrpc.GenSelfRelationshipLink(s, "roles", r.Id),
-					Related: aphgrpc.GenRelatedRelationshipLink(s, "roles", r.Id),
+					Self:    aphgrpc.GenSelfRelationshipLink(s, "roles", id),
+					Related: aphgrpc.GenRelatedRelationshipLink(s, "roles", id),
 				},
 			},
 		},
