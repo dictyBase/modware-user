@@ -48,6 +48,29 @@ func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleServ
 	}
 }
 
+func (s *RoleService) getResourceWithSelectedAttr(id int64) (*user.Role, error) {
+	drole := &dbRole{}
+	columns := s.fieldsToColumns(s.params.Fields)
+	err := s.Dbh.Select(columns...).From(roleDbTable).
+		Where("role.auth_role_id = $1", id).QueryStruct(drole)
+	if err != nil {
+		return &user.Role{}, err
+	}
+	return s.buildResource(id, s.dbToResourceAttributes(drole)), nil
+}
+
+func (s *RoleService) getResource(id int64) (*user.Role, error) {
+	drole := &dbRole{}
+	err := s.Dbh.Select("role.*").
+		From(roleDbTable).
+		Where("role.auth_role_id = $1", id).
+		QueryStruct(drole)
+	if err != nil {
+		return &user.Role{}, err
+	}
+	return s.buildResource(id, s.dbToResourceAttributes(drole)), nil
+}
+
 func (s *RoleService) getAllRows() ([]*dbRole, error) {
 	var dbrows []*dbRole
 	err := s.Dbh.Select("role.*").
