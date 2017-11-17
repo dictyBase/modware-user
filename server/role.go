@@ -3,6 +3,10 @@ package server
 import (
 	"context"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
@@ -13,7 +17,8 @@ import (
 )
 
 const (
-	roleDbTable = "auth_role role"
+	roleDbTable    = "auth_role"
+	roleDbTblAlias = "auth_role role"
 )
 
 type dbRole struct {
@@ -51,11 +56,37 @@ func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleServ
 	}
 }
 
+func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest) (*user.Role, error) {
+	if err := s.existsResource(r.Data.Id); err != nil {
+		return &user.Role{}, aphgrpc.handleError(ctx, err)
+	}
+	dbrole := s.attrTodbRole(r.Data.Attributes)
+	rMap := aphgrpc.GetDefinedTagsWithValue(dbrole, "db")
+	if len(rMap) > 0 {
+		_, err := s.Dbh.Update(roleDbTable).SetMap(rMap).
+			Where("auth_role_id = $1", r.Data.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &user.Role{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	for _, u := range r.Data.Relationships.Users.Data {
+		_, err = s.Dbh.Update("auth_user_role").
+			Set("auth_user_id", u.Id).
+			Where("auth_role_id = $1", r.Data.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &user.Role{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
+}
+
 func (s *RoleService) DeleteRole(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
 	}
-	_, err := s.Dbh.DeleteFrom("auth_role").Where("auth_role_id = $1", r.Id).Exec()
+	_, err := s.Dbh.DeleteFrom(roleDbTable).Where("auth_role_id = $1", r.Id).Exec()
 	if err != nil {
 		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
@@ -71,7 +102,7 @@ func (s *RoleService) existsResource(id int64) error {
 func (s *RoleService) getResourceWithSelectedAttr(id int64) (*user.Role, error) {
 	drole := &dbRole{}
 	columns := s.fieldsToColumns(s.params.Fields)
-	err := s.Dbh.Select(columns...).From(roleDbTable).
+	err := s.Dbh.Select(columns...).From(roleDbTblAlias).
 		Where("role.auth_role_id = $1", id).QueryStruct(drole)
 	if err != nil {
 		return &user.Role{}, err
@@ -82,7 +113,7 @@ func (s *RoleService) getResourceWithSelectedAttr(id int64) (*user.Role, error) 
 func (s *RoleService) getResource(id int64) (*user.Role, error) {
 	drole := &dbRole{}
 	err := s.Dbh.Select("role.*").
-		From(roleDbTable).
+		From(roleDbTblAlias).
 		Where("role.auth_role_id = $1", id).
 		QueryStruct(drole)
 	if err != nil {
@@ -94,7 +125,7 @@ func (s *RoleService) getResource(id int64) (*user.Role, error) {
 func (s *RoleService) getAllRows() ([]*dbRole, error) {
 	var dbrows []*dbRole
 	err := s.Dbh.Select("role.*").
-		From(roleDbTable).
+		From(roleDbTblAlias).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
@@ -102,7 +133,7 @@ func (s *RoleService) getAllRows() ([]*dbRole, error) {
 func (s *RoleService) getAllRowsWithPaging(pagenum int64, pagesize int64) ([]*dbRole, error) {
 	var dbrows []*dbRole
 	err := s.Dbh.Select("role.*").
-		From(roleDbTable).
+		From(roleDbTblAlias).
 		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dbrows)
 	return dbrows, err
@@ -112,7 +143,7 @@ func (s *RoleService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*
 	var dbrows []*dbRole
 	columns := s.MapFieldsToColumns(s.params.Fields)
 	err := s.Dbh.Select(columns...).
-		From(roleDbTable).
+		From(roleDbTblAlias).
 		Paginate(uint64(pageNum), uint64(pageSize)).
 		QueryStructs(dbrows)
 	return dbrows, err
@@ -121,7 +152,7 @@ func (s *RoleService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*
 func (s *RoleService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
 	var dbrows []*dbRole
 	err := s.Dbh.Select("role.*").
-		From(roleDbTable).
+		From(roleDbTblAlias).
 		Scope(
 			aphgrpc.FilterToWhereClause(s, s.params.Filter),
 			aphgrpc.FilterToBindValue(s.params.Filter)...,
@@ -135,7 +166,7 @@ func (s *RoleService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int
 	var dbrows []*dbRole
 	columns := s.MapFieldsToColumns(s.params.Fields)
 	err := s.Dbh.Select(columns...).
-		From(roleDbTable).
+		From(roleDbTblAlias).
 		Scope(
 			aphgrpc.FilterToWhereClause(s, s.params.Filter),
 			aphgrpc.FilterToBindValue(s.params.Filter)...,
