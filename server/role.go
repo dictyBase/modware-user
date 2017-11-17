@@ -5,6 +5,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"github.com/dictyBase/apihelpers/aphgrpc"
@@ -56,14 +57,50 @@ func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleServ
 	}
 }
 
+func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest) (*user.Role, error) {
+	var roleId int64
+	dbrole := s.attrTodbRole(r.Data.Attributes)
+	rcolumns := aphgrpc.GetDefinedTags(dbrole, "db")
+	if len(rcolumns) > 0 {
+		_, err := s.Dbh.InsertInto("auth_role").
+			Columns(rcolumns...).
+			Record(dbrole).
+			Returning("auth_role_id").QueryScalar(&roleId)
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	for _, u := range r.Data.Relationships.Users.Data {
+		_, err = s.Dbh.InsertInto("auth_user_role").
+			Columns("auth_user_id", "auth_role_id").
+			Values(u.Id, roleId).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	for _, p := range r.Data.Relationships.Permissions.Data {
+		_, err := s.Dbh.InsertInto("auth_role_permission").
+			Columns("auth_role_id", "auth_permission_id").
+			Values(roleId, p.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &user.User{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
+	return s.buildResource(roleId, r.Data.Attributes), nil
+}
+
 func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest) (*user.Role, error) {
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &user.Role{}, aphgrpc.handleError(ctx, err)
 	}
 	dbrole := s.attrTodbRole(r.Data.Attributes)
-	rMap := aphgrpc.GetDefinedTagsWithValue(dbrole, "db")
-	if len(rMap) > 0 {
-		_, err := s.Dbh.Update(roleDbTable).SetMap(rMap).
+	rmap := aphgrpc.GetDefinedTagsWithValue(dbrole, "db")
+	if len(rmap) > 0 {
+		_, err := s.Dbh.Update(roleDbTable).SetMap(rmap).
 			Where("auth_role_id = $1", r.Data.Id).Exec()
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)

@@ -446,7 +446,7 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 		}
 	}
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
-	return getSingleUserData(userId, r.Data.Attributes), nil
+	return s.buildResource(userId, r.Data.Attributes), nil
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest) (*user.User, error) {
