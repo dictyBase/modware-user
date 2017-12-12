@@ -300,7 +300,7 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 	).dbToCollResourceData(dbrows), nil
 }
 
-func (s *RoleService) buildUserResourceIdentifiers(users []*user.User) []*jsonapi.Data {
+func (s *RoleService) buildUserResourceIdentifiers(users []*user.Data) []*jsonapi.Data {
 	jdata := make([]*jsonapi.Data, len(users))
 	for i, r := range users {
 		jdata[i] = &jsonapi.Data{
@@ -311,7 +311,7 @@ func (s *RoleService) buildUserResourceIdentifiers(users []*user.User) []*jsonap
 	return jdata
 }
 
-func (s *RoleService) buildPermissionResourceIdentifiers(perms []*user.Permission) []*jsonapi.Data {
+func (s *RoleService) buildPermissionResourceIdentifiers(perms []*user.PermissionData) []*jsonapi.Data {
 	jdata := make([]*jsonapi.Data, len(perms))
 	for i, r := range perms {
 		jdata[i] = &jsonapi.Data{
@@ -368,7 +368,7 @@ func (s *RoleService) buildResourceRelationships(id int64, role *user.Role) erro
 				return err
 			}
 			allInc = append(allInc, incUsers...)
-			role.Relationships.Users.Data = users
+			role.Relationships.Users.Data = s.buildUserResourceIdentifiers(users)
 		case "permissions":
 			perms, err := s.getPermissionResourceData(id)
 			if err != nil {
@@ -379,8 +379,7 @@ func (s *RoleService) buildResourceRelationships(id int64, role *user.Role) erro
 				return err
 			}
 			allInc = append(allInc, incPerms...)
-			role.Relationships.Permissions.Data = permissions
-
+			role.Relationships.Permissions.Data = s.buildPermissionResourceIdentifiers(perms)
 		}
 		role.Included = allInc
 	}
