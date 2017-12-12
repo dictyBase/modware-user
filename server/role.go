@@ -57,6 +57,54 @@ func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleServ
 	}
 }
 
+func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user.Role, error) {
+	params, md, err := aphgrpc.ValidateAndParseGetParams(s, r)
+	if err != nil {
+		grpc.SetTrailer(ctx, md)
+		return &user.Role{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	s.params = params
+	s.listMethod = false
+	switch {
+	case params.HasFields && params.HasInclude:
+		s.includeStr = r.Include
+		s.fieldsStr = r.Fields
+		role, err := s.getResourceWithSelectedAttr(params, r.Id)
+		if err != nil {
+			return &user.Role{}, aphgrpc.handleError(ctx, err)
+		}
+		err := s.buildResourceRelationships(id, role)
+		if err != nil {
+			return &user.Role{}, aphgrpc.handleError(ctx, err)
+		}
+		return role, nil
+	case params.HasFields:
+		s.fieldsStr = r.Fields
+		role, err := s.getResourceWithSelectedAttr(params, r.Id)
+		if err != nil {
+			return &user.Role{}, aphgrpc.handleError(ctx, err)
+		}
+		return role, nil
+	case params.HasInclude:
+		s.includeStr = r.Include
+		role, err := s.getResource(r.Id)
+		if err != nil {
+			return &user.Role{}, aphgrpc.handleError(ctx, err)
+		}
+		err := s.buildResourceRelationships(id, role)
+		if err != nil {
+			return &user.Role{}, aphgrpc.handleError(ctx, err)
+		}
+		return role, nil
+	default:
+		role, err := s.getResource(r.Id)
+		if err != nil {
+			return &user.Role{}, aphgrpc.handleError(ctx, err)
+		}
+		return role, nil
+	}
+}
+
 func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest) (*user.Role, error) {
 	var roleId int64
 	dbrole := s.attrTodbRole(r.Data.Attributes)
@@ -303,6 +351,40 @@ func (s *RoleService) buildResource(id int64, attr *user.RoleAttributes) *user.R
 	return &user.Role{
 		Data: s.buildResourceData(id, attr),
 	}
+}
+
+func (s *RoleService) buildResourceRelationships(id int64, role *user.Role) error {
+	var allInc []*any.Any
+	for _, inc := range s.parse.Includes {
+		switch inc {
+		case "users":
+			users, err := s.getUserResourceData(id)
+			if err != nil {
+				return err
+			}
+			// included relationships
+			incUsers, err := aphgrpc.ConvertAllToAny(users)
+			if err != nil {
+				return err
+			}
+			allInc = append(allInc, incUsers...)
+			role.Relationships.Users.Data = users
+		case "permissions":
+			perms, err := s.getPermissionResourceData(id)
+			if err != nil {
+				return err
+			}
+			incPerms, err := aphgrpc.ConvertAllToAny(perms)
+			if err != nil {
+				return err
+			}
+			allInc = append(allInc, incPerms...)
+			role.Relationships.Permissions.Data = permissions
+
+		}
+		role.Included = allInc
+	}
+	return nil
 }
 
 func (s *RoleService) dbToResourceAttributes(r *dbRole) *user.RoleAttributes {
