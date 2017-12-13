@@ -4,6 +4,7 @@ import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -136,21 +137,14 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		roles, err := s.getRoleResourceData(id)
+		err := s.buildResourceRelationships(id, u)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		// included relationships
-		incRoles, err := aphgrpc.ConvertAllToAny(roles)
-		if err != nil {
-			return &user.User{}, aphgrpc.handleError(ctx, err)
-		}
-		u.Included = incRoles
-		u.Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 		return u, nil
 	case params.HasFields:
 		s.fieldsStr = r.Fields
-		u, err := s.getUserWithSelectedAttr(params, r.Id)
+		u, err := s.getResourceWithSelectedAttr(params, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
@@ -161,17 +155,10 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		roles, err := s.getRoleResourceData(id)
+		err := s.buildResourceRelationships(id, u)
 		if err != nil {
 			return &user.User{}, aphgrpc.handleError(ctx, err)
 		}
-		// included relationships
-		incRoles, err := aphgrpc.ConvertAllToAny(roles)
-		if err != nil {
-			return &user.User{}, aphgrpc.handleError(ctx, err)
-		}
-		u.Included = incRoles
-		u.Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 		return u, nil
 	default:
 		u, err := s.getResource(r.Id)
@@ -601,7 +588,7 @@ func (s *UserService) getRoleResourceData(id int64) ([]*user.RoleData, error) {
 	return NewRoleService(s.Dbh, s.GetPathPrefix(), s.GetBaseURL()).dbToCollResourceData(drole), nil
 }
 
-func (s *UserService) buildRoleResourceIdentifiers(roles []*user.Role) []*jsonapi.Data {
+func (s *UserService) buildRoleResourceIdentifiers(roles []*user.RoleData) []*jsonapi.Data {
 	jdata := make([]*jsonapi.Data, len(roles))
 	for i, r := range roles {
 		jdata[i] = &jsonapi.Data{
@@ -637,6 +624,22 @@ func (s *UserService) buildResource(id int64, uattr *user.UserAttributes) *user.
 	return &user.User{
 		Data: s.buildResourceData(id, uattr),
 	}
+}
+
+func (s *UserService) buildResourceRelationships(id int64, user *user.User) error {
+	var allInc []*any.Any
+	roles, err := s.getRoleResourceData(id)
+	if err != nil {
+		return err
+	}
+	incRoles, err := aphgrpc.ConvertAllToAny(roles)
+	if err != nil {
+		return err
+	}
+	allInc = append(allInc, incRoles...)
+	user.Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
+	user.Included = allInc
+	return nil
 }
 
 // -- Functions that generates various user resource objects from
