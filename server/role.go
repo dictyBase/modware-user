@@ -105,6 +105,237 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 }
 
+func (s *UserService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*user.RoleCollection, error) {
+	params, md, err := aphgrpc.ValidateAndParseListParams(s, r)
+	if err != nil {
+		grpc.SetTrailer(ctx, md)
+		return &user.Role{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	s.params = params
+	s.listMethod = true
+	// has pagination query parameters
+	if aphgrpc.HasPagination {
+		switch {
+		// filter, fields and include parameters
+		case params.HasFields && params.HasInclude && params.HasFilter:
+			s.fieldsStr = r.Fields
+			s.filterStr = r.Filter
+			s.includeStr = r.Include
+			count, err := s.getAllFilteredCount(roleDbTable)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+		// fields and includes
+		case params.HasFields && params.HasInclude:
+			s.fieldsStr = r.Fields
+			s.includeStr = r.Include
+			count, err := s.getCount(userDbTable)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbRoles, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+		// fields and filters
+		case params.HasFields && params.HasFilter:
+			s.fieldsStr = r.Fields
+			s.filterStr = r.Filter
+			count, err := s.getAllFilteredCount(roleDbTable)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(params, r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+		// include and filter
+		case params.HasInclude && params.HasFilter:
+			s.includeStr = r.Include
+			s.filterStr = r.Filter
+			count, err := s.getAllFilteredCount(roleDbTable)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbRoles, err := s.getAllFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+		case params.HasFields:
+			s.fieldsStr = r.Fields
+			count, err := s.getCount(roleDbTable)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbRoles, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+		case params.HasFilter:
+			s.filterStr = r.Filter
+			count, err := s.getAllFilteredCount(roleDbTable)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbRoles, err := s.getAllFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+		case params.HasInclude:
+			s.includeStr = r.Include
+			count, err := s.getCount(userDbTable)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbRoles, err := s.getAllRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+		// only pagination
+		default:
+			count, err := s.getCount(userDbTable)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			dbRoles, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize), nil
+		}
+	}
+	// request without any pagination query parameters
+	switch {
+	case params.HasFields && params.HasFilter && params.HasInclude:
+		s.fieldsStr = r.Fields
+		s.filterStr = r.Filter
+		s.includeStr = r.Include
+		count, err := s.getAllFilteredCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbRoles), nil
+	case params.HasFields && params.HasFilter:
+		s.fieldsStr = r.Fields
+		s.filterStr = r.Filter
+		count, err := s.getAllFilteredCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbRoles), nil
+	case params.HasFields && params.HasInclude:
+		s.fieldsStr = r.Fields
+		s.includeStr = r.Include
+		count, err := s.getCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbRoles, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbRoles), nil
+	case params.HasFilter && params.HasInclude:
+		s.includeStr = r.Include
+		s.filterStr = r.Filter
+		count, err := s.getAllFilteredCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbRoles, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbRoles), nil
+	case params.HasFields:
+		s.fieldsStr = r.Fields
+		count, err := s.getCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbRoles, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbRoles), nil
+	case params.HasFilter:
+		s.filterStr = r.Filter
+		count, err := s.getAllFilteredCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbRoles, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbRoles), nil
+	case params.HasInclude:
+		s.includeStr = r.Include
+		count, err := s.getCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbRoles, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbRoles), nil
+	default:
+		count, err := s.getCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+		}
+		if count > aphgrpc.DefaultPagesize {
+			dbRoles, err := s.getAllPaginatedRows(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			if err != nil {
+				return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+			}
+			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		}
+		return s.dbToCollResource(dbRoles), nil
+	}
+}
+
 func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest) (*user.Role, error) {
 	var roleId int64
 	dbrole := s.attrTodbRole(r.Data.Attributes)
