@@ -105,11 +105,11 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 }
 
-func (s *UserService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*user.RoleCollection, error) {
+func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*user.RoleCollection, error) {
 	params, md, err := aphgrpc.ValidateAndParseListParams(s, r)
 	if err != nil {
 		grpc.SetTrailer(ctx, md)
-		return &user.Role{}, status.Error(codes.InvalidArgument, err.Error())
+		return &user.RoleCollection{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	s.params = params
 	s.listMethod = true

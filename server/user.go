@@ -169,6 +169,23 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 }
 
+func (s *UserService) GetRelatedRoles(ctx context.Context, r *jsonapi.RelationshipRequest) (*user.RoleCollection, error) {
+	rdata, err := s.getRoleResourceData(r.Id)
+	if err != nil {
+		return &user.RoleCollection{}, aphgrpc.handleError(ctx, err)
+	}
+	return &user.RoleCollection{
+		Data: rdata,
+		Links: &jsonapi.PaginationLinks{
+			Self: NewRoleService(
+				s.Dbh,
+				s.GetPathPrefix(),
+				s.GetBaseURL(),
+			).genCollResourceSelfLink(),
+		},
+	}, nil
+}
+
 func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*user.UserCollection, error) {
 	params, md, err := aphgrpc.ValidateAndParseListParams(s, r)
 	if err != nil {
@@ -583,7 +600,7 @@ func (s *UserService) getRoleResourceData(id int64) ([]*user.RoleData, error) {
 			ON auth_user_role.auth_role_id = role.auth_role_id
 		`).Where("auth_user_role.auth_user_id = $1", id).QueryStructs(drole)
 	if err != nil {
-		return &user.RoleAttributes, err
+		return rdata, err
 	}
 	return NewRoleService(s.Dbh, s.GetPathPrefix(), s.GetBaseURL()).dbToCollResourceData(drole), nil
 }
