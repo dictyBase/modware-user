@@ -453,6 +453,37 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 	return s.buildResource(userId, r.Data.Attributes), nil
 }
 
+func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if err := s.existsResource(r.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	rsrv := NewRoleService(
+		s.Dbh,
+		s.GetPathPrefix(),
+		s.GetBaseURL(),
+	)
+	for _, rd := range r.Data {
+		err := s.Dbh.Select("aurole.auth_user_role_id").
+			From("auth_user_role aurole").
+			Where("aurole.auth_user_id = $1 AND aurole.auth_role_id = $2", r.Id, rd.Id).
+			Exec()
+		if err != nil {
+			if err == dat.ErrNotFound {
+				err := s.Dbh.InsertInto("auth_user_role").
+					Columns("auth_user_id", "auth_role_id").
+					Values(r.Id, rd.Id).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+					return &user.User{}, status.Error(codes.Internal, err.Error())
+
+				}
+			}
+		}
+	}
+	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
+	return &empty.Empty{}, nil
+}
+
 func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest) (*user.User, error) {
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &user.User{}, aphgrpc.handleError(ctx, err)
