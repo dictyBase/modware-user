@@ -469,7 +469,7 @@ func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 					Values(r.Id, rd.Id).Exec()
 				if err != nil {
 					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-					return &user.User{}, status.Error(codes.Internal, err.Error())
+					return &empty.Empty{}, status.Error(codes.Internal, err.Error())
 
 				}
 			}

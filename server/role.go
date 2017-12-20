@@ -406,6 +406,58 @@ func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest)
 	return s.buildResource(roleId, r.Data.Attributes), nil
 }
 
+func (s *RoleService) CreateUserRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if err := s.existsResource(r.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	for _, ud := range r.Data {
+		err := s.Dbh.Select("aurole.auth_user_role_id").
+			From("auth_user_role aurole").
+			Where("aurole.auth_role_id = $1 AND aurole.auth_user_role_id = $2", r.Id, ud.Id).
+			Exec()
+		if err != nil {
+			if err == dat.ErrNotFound {
+				err := s.Dbh.InsertInto("auth_user_role").
+					Columns("auth_role_id", "auth_user_id").
+					Values(r.Id, ud.Id).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+					return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+
+				}
+			}
+		}
+	}
+	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST_NO_CONTENT"))
+	return &empty.Empty{}, nil
+}
+
+func (s *RoleService) CreatePermissionRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if err := s.existsResource(r.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	for _, pd := range r.Data {
+		err := s.Dbh.Select("auth_role_permission.auth_role_permission_id").
+			From("auth_role_permission").
+			Where("auth_role_permission.auth_role_id = $1 AND auth_role_permission.auth_permission_id = $2", r.Id, pd.Id).
+			Exec()
+		if err != nil {
+			if err == dat.ErrNotFound {
+				err := s.Dbh.InsertInto("auth_role_permission").
+					Columns("auth_role_id", "auth_permission_id").
+					Values(r.Id, pd.Id).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+					return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+
+				}
+			}
+		}
+	}
+	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST_NO_CONTENT"))
+	return &empty.Empty{}, nil
+}
+
 func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest) (*user.Role, error) {
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &user.Role{}, aphgrpc.handleError(ctx, err)
