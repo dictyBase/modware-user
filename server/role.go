@@ -484,6 +484,52 @@ func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest)
 	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
 }
 
+func (s *RoleService) UpdateUserRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if err := s.existsResource(r.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	_, err := s.Dbh.DeleteFrom("auth_user_role").
+		Where("auth_user_role.auth_role_id = $1", r.Id).
+		Exec()
+	if err != nil {
+		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+	for _, ud := range r.Data {
+		err := s.Dbh.InsertInto("auth_user_role").
+			Columns("auth_role_id", "auth_user_id").
+			Values(r.Id, ud.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	return &empty.Empty{}, nil
+}
+
+func (s *RoleService) UpdatePermissionRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if err := s.existsResource(r.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	_, err := s.Dbh.DeleteFrom("auth_role_permission").
+		Where("auth_role_permission.auth_role_id = $1", r.Id).
+		Exec()
+	if err != nil {
+		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+	for _, pd := range r.Data {
+		err := s.Dbh.InsertInto("auth_role_permission").
+			Columns("auth_role_id", "auth_permission_id").
+			Values(r.Id, pd.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	return &empty.Empty{}, nil
+}
+
 func (s *RoleService) DeleteRole(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
