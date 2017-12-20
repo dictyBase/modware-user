@@ -179,7 +179,7 @@ func (s *UserService) GetRelatedRoles(ctx context.Context, r *jsonapi.Relationsh
 		Links: &jsonapi.PaginationLinks{
 			Self: NewRoleService(
 				s.Dbh,
-				s.GetPathPrefix(),
+				"roles",
 				s.GetBaseURL(),
 			).genCollResourceSelfLink(),
 		},

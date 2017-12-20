@@ -105,6 +105,40 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 }
 
+func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.RelationshipRequest) (*UserCollection, error) {
+	udata, err := s.getUserResourceData(id)
+	if err != nil {
+		return &user.UserCollection{}, aphgrpc.handleError(ctx, err)
+	}
+	return &user.UserCollection{
+		Data: udata,
+		Links: &jsonapi.PaginationLinks{
+			Self: NewUserService(
+				s.Dbh,
+				"users",
+				s.GetBaseURL(),
+			).genCollResourceSelfLink(),
+		},
+	}, nil
+}
+
+func (s *RoleService) GetRelatedPermissions(ctx context.Context, r *jsonapi.RelationshipRequest) (*PermissionCollection, error) {
+	pdata, err := s.getPermissionResourceData(r.Id)
+	if err != nil {
+		return &user.PermissionCollection{}, aphgrpc.handleError(ctx, err)
+	}
+	return &user.PermissionCollection{
+		Data: pdata,
+		Links: &jsonapi.PaginationLinks{
+			Self: NewPermissionService(
+				s.Dbh,
+				"permissions",
+				s.GetBaseURL(),
+			).genCollResourceSelfLink(),
+		},
+	}, nil
+}
+
 func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*user.RoleCollection, error) {
 	params, md, err := aphgrpc.ValidateAndParseListParams(s, r)
 	if err != nil {
