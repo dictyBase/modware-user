@@ -516,7 +516,26 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 }
 
 func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
-
+	if err := s.existsResource(r.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	_, err := s.Dbh.DeleteFrom("auth_user_role").
+		Where("auth_user_role.auth_user_id = $1", r.Id).
+		Exec()
+	if err != nil {
+		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+	for _, rd := range r.Data {
+		err := s.Dbh.InsertInto("auth_user_role").
+			Columns("auth_user_id", "auth_role_id").
+			Values(r.Id, rd.Id).Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+			return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	return &empty.Empty{}, nil
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
