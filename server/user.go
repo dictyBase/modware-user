@@ -457,11 +457,6 @@ func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 	if err := s.existsResource(r.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
 	}
-	rsrv := NewRoleService(
-		s.Dbh,
-		s.GetPathPrefix(),
-		s.GetBaseURL(),
-	)
 	for _, rd := range r.Data {
 		err := s.Dbh.Select("aurole.auth_user_role_id").
 			From("auth_user_role aurole").
@@ -480,7 +475,7 @@ func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 			}
 		}
 	}
-	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
+	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST_NO_CONTENT"))
 	return &empty.Empty{}, nil
 }
 
@@ -520,6 +515,10 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
 }
 
+func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+
+}
+
 func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
@@ -528,6 +527,22 @@ func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) 
 	if err != nil {
 		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+	return &empty.Empty{}, nil
+}
+
+func (s *UserService) DeleteRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if err := s.existsResource(r.Id); err != nil {
+		return &empty.Empty{}, aphgrpc.handleError(ctx, err)
+	}
+	for _, rd := range r.Data {
+		_, err := s.Dbh.DeleteFrom("auth_user_role").
+			Where("auth_user_role.auth_user_id = $1 AND auth_user_role.auth_role_id = $2", r.Id, rd.Id).
+			Exec()
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
+			return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+		}
 	}
 	return &empty.Empty{}, nil
 }
