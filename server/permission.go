@@ -37,10 +37,9 @@ type PermissionService struct {
 	*aphgrpc.Service
 }
 
-func NewPermissionService(dbh *runner.DB, pathPrefix string, baseURL string) *PermissionService {
+func NewPermissionService(dbh *runner.DB, pathPrefix string) *PermissionService {
 	return &PermissionService{
 		&aphgrpc.Service{
-			baseURL:    baseURL,
 			resource:   "permissions",
 			Dbh:        dbh,
 			pathPrefix: pathPrefix,

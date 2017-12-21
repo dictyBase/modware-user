@@ -34,10 +34,9 @@ type RoleService struct {
 	*aphgrpc.Service
 }
 
-func NewRoleService(dbh *runner.DB, pathPrefix string, baseURL string) *RoleService {
+func NewRoleService(dbh *runner.DB, pathPrefix string) *RoleService {
 	return &RoleService{
 		&aphgrpc.Service{
-			baseURL:    baseURL,
 			resource:   "roles",
 			Dbh:        dbh,
 			pathPrefix: pathPrefix,
@@ -116,7 +115,6 @@ func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.Relationsh
 			Self: NewUserService(
 				s.Dbh,
 				"users",
-				s.GetBaseURL(),
 			).genCollResourceSelfLink(),
 		},
 	}, nil
@@ -133,7 +131,6 @@ func (s *RoleService) GetRelatedPermissions(ctx context.Context, r *jsonapi.Rela
 			Self: NewPermissionService(
 				s.Dbh,
 				"permissions",
-				s.GetBaseURL(),
 			).genCollResourceSelfLink(),
 		},
 	}, nil
@@ -671,7 +668,6 @@ func (s *RoleService) getPermissionResourceData(id int64) ([]*user.PermissionDat
 	return NewPermissionService(
 		s.Dbh,
 		s.GetPathPrefix(),
-		s.GetBaseURL(),
 	).dbToCollResourceData(dbrows), nil
 }
 
@@ -691,7 +687,6 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 	return NewUserService(
 		s.Dbh,
 		s.GetPathPrefix(),
-		s.GetBaseURL(),
 	).dbToCollResourceData(dbrows), nil
 }
 
