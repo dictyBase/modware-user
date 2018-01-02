@@ -37,21 +37,21 @@ type RoleService struct {
 func NewRoleService(dbh *runner.DB, pathPrefix string) *RoleService {
 	return &RoleService{
 		&aphgrpc.Service{
-			resource:   "roles",
+			Resource:   "roles",
 			Dbh:        dbh,
-			pathPrefix: pathPrefix,
-			include:    []string{"users", "permissions"},
-			filterToColumns: map[string]string{
+			PathPrefix: pathPrefix,
+			Include:    []string{"users", "permissions"},
+			FilToColumns: map[string]string{
 				"role":        "role.role",
 				"description": "role.description",
 			},
-			fieldsToColumns: map[string]string{
+			FieldsToColumns: map[string]string{
 				"role":        "role.role",
 				"description": "role.description",
 				"created_at":  "role.created_at",
 				"updated_at":  "role.updated_at",
 			},
-			requiredAttrs: []string{"Role"},
+			ReqAttrs: []string{"Role"},
 		},
 	}
 }
@@ -62,35 +62,35 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 		grpc.SetTrailer(ctx, md)
 		return &user.Role{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.params = params
-	s.listMethod = false
+	s.Params = params
+	s.ListMethod = false
 	switch {
 	case params.HasFields && params.HasInclude:
-		s.includeStr = r.Include
-		s.fieldsStr = r.Fields
+		s.IncludeStr = r.Include
+		s.FieldsStr = r.Fields
 		role, err := s.getResourceWithSelectedAttr(params, r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
-		err := s.buildResourceRelationships(id, role)
+		err = s.buildResourceRelationships(id, role)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
 		return role, nil
 	case params.HasFields:
-		s.fieldsStr = r.Fields
+		s.FieldsStr = r.Fields
 		role, err := s.getResourceWithSelectedAttr(params, r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
 		return role, nil
 	case params.HasInclude:
-		s.includeStr = r.Include
+		s.IncludeStr = r.Include
 		role, err := s.getResource(r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
-		err := s.buildResourceRelationships(id, role)
+		err = s.buildResourceRelationships(id, role)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -104,7 +104,7 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 }
 
-func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.RelationshipRequest) (*UserCollection, error) {
+func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.RelationshipRequest) (*user.UserCollection, error) {
 	udata, err := s.getUserResourceData(id)
 	if err != nil {
 		return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
@@ -120,7 +120,7 @@ func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.Relationsh
 	}, nil
 }
 
-func (s *RoleService) GetRelatedPermissions(ctx context.Context, r *jsonapi.RelationshipRequest) (*PermissionCollection, error) {
+func (s *RoleService) GetRelatedPermissions(ctx context.Context, r *jsonapi.RelationshipRequest) (*user.PermissionCollection, error) {
 	pdata, err := s.getPermissionResourceData(r.Id)
 	if err != nil {
 		return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
@@ -142,16 +142,16 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		grpc.SetTrailer(ctx, md)
 		return &user.RoleCollection{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.params = params
-	s.listMethod = true
+	s.Params = params
+	s.ListMethod = true
 	// has pagination query parameters
 	if aphgrpc.HasPagination {
 		switch {
 		// filter, fields and include parameters
 		case params.HasFields && params.HasInclude && params.HasFilter:
-			s.fieldsStr = r.Fields
-			s.filterStr = r.Filter
-			s.includeStr = r.Include
+			s.FieldsStr = r.Fields
+			s.FilterStr = r.Filter
+			s.IncludeStr = r.Include
 			count, err := s.getAllFilteredCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -163,8 +163,8 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
 		// fields and includes
 		case params.HasFields && params.HasInclude:
-			s.fieldsStr = r.Fields
-			s.includeStr = r.Include
+			s.FieldsStr = r.Fields
+			s.IncludeStr = r.Include
 			count, err := s.getCount(userDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -176,8 +176,8 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
 		// fields and filters
 		case params.HasFields && params.HasFilter:
-			s.fieldsStr = r.Fields
-			s.filterStr = r.Filter
+			s.FieldsStr = r.Fields
+			s.FilterStr = r.Filter
 			count, err := s.getAllFilteredCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -189,8 +189,8 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
 		// include and filter
 		case params.HasInclude && params.HasFilter:
-			s.includeStr = r.Include
-			s.filterStr = r.Filter
+			s.IncludeStr = r.Include
+			s.FilterStr = r.Filter
 			count, err := s.getAllFilteredCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -201,7 +201,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			}
 			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
 		case params.HasFields:
-			s.fieldsStr = r.Fields
+			s.FieldsStr = r.Fields
 			count, err := s.getCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -212,7 +212,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			}
 			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
 		case params.HasFilter:
-			s.filterStr = r.Filter
+			s.FilterStr = r.Filter
 			count, err := s.getAllFilteredCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -223,7 +223,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			}
 			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
 		case params.HasInclude:
-			s.includeStr = r.Include
+			s.IncludeStr = r.Include
 			count, err := s.getCount(userDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -249,9 +249,9 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter && params.HasInclude:
-		s.fieldsStr = r.Fields
-		s.filterStr = r.Filter
-		s.includeStr = r.Include
+		s.FieldsStr = r.Fields
+		s.FilterStr = r.Filter
+		s.IncludeStr = r.Include
 		count, err := s.getAllFilteredCount(roleDbTable)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -265,8 +265,8 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFields && params.HasFilter:
-		s.fieldsStr = r.Fields
-		s.filterStr = r.Filter
+		s.FieldsStr = r.Fields
+		s.FilterStr = r.Filter
 		count, err := s.getAllFilteredCount(roleDbTable)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -280,8 +280,8 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFields && params.HasInclude:
-		s.fieldsStr = r.Fields
-		s.includeStr = r.Include
+		s.FieldsStr = r.Fields
+		s.IncludeStr = r.Include
 		count, err := s.getCount(roleDbTable)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -295,8 +295,8 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFilter && params.HasInclude:
-		s.includeStr = r.Include
-		s.filterStr = r.Filter
+		s.IncludeStr = r.Include
+		s.FilterStr = r.Filter
 		count, err := s.getAllFilteredCount(roleDbTable)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -310,7 +310,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFields:
-		s.fieldsStr = r.Fields
+		s.FieldsStr = r.Fields
 		count, err := s.getCount(roleDbTable)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -324,7 +324,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFilter:
-		s.filterStr = r.Filter
+		s.FilterStr = r.Filter
 		count, err := s.getAllFilteredCount(roleDbTable)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -338,7 +338,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasInclude:
-		s.includeStr = r.Include
+		s.IncludeStr = r.Include
 		count, err := s.getCount(roleDbTable)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
@@ -578,7 +578,7 @@ func (s *RoleService) existsResource(id int64) error {
 
 func (s *RoleService) getResourceWithSelectedAttr(id int64) (*user.Role, error) {
 	drole := &dbRole{}
-	columns := s.fieldsToColumns(s.params.Fields)
+	columns := s.fieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).From(roleDbTblAlias).
 		Where("role.auth_role_id = $1", id).QueryStruct(drole)
 	if err != nil {
@@ -618,7 +618,7 @@ func (s *RoleService) getAllRowsWithPaging(pagenum int64, pagesize int64) ([]*db
 
 func (s *RoleService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
 	var dbrows []*dbRole
-	columns := s.MapFieldsToColumns(s.params.Fields)
+	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(roleDbTblAlias).
 		Paginate(uint64(pageNum), uint64(pageSize)).
@@ -631,8 +631,8 @@ func (s *RoleService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*
 	err := s.Dbh.Select("role.*").
 		From(roleDbTblAlias).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.params.Filter),
-			aphgrpc.FilterToBindValue(s.params.Filter)...,
+			aphgrpc.FilterToWhereClause(s, s.Params.Filter),
+			aphgrpc.FilterToBindValue(s.Params.Filter)...,
 		).
 		Paginate(uint64(pageNum), uint64(pageSize)).
 		QueryStructs(dbrows)
@@ -641,12 +641,12 @@ func (s *RoleService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*
 
 func (s *RoleService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
 	var dbrows []*dbRole
-	columns := s.MapFieldsToColumns(s.params.Fields)
+	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(roleDbTblAlias).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.params.Filter),
-			aphgrpc.FilterToBindValue(s.params.Filter)...,
+			aphgrpc.FilterToWhereClause(s, s.Params.Filter),
+			aphgrpc.FilterToBindValue(s.Params.Filter)...,
 		).
 		Paginate(uint64(pageNum), uint64(pageSize)).
 		QueryStructs(dbrows)
@@ -690,7 +690,7 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 	).dbToCollResourceData(dbrows), nil
 }
 
-func (s *RoleService) buildUserResourceIdentifiers(users []*user.Data) []*jsonapi.Data {
+func (s *RoleService) buildUserResourceIdentifiers(users []*user.UserData) []*jsonapi.Data {
 	jdata := make([]*jsonapi.Data, len(users))
 	for i, r := range users {
 		jdata[i] = &jsonapi.Data{
@@ -802,7 +802,7 @@ func (s *RoleService) dbToCollResource(dbrows []*dbRole) (*user.RoleCollection, 
 	}, nil
 }
 
-func (s *RoleService) dbToCollResourceWithPagination(count int64, dbrows []*dbRole, pagenum, pagesize int64) (*user.RoleCollection, err) {
+func (s *RoleService) dbToCollResourceWithPagination(count int64, dbrows []*dbRole, pagenum, pagesize int64) (*user.RoleCollection, error) {
 	rdata := s.dbToCollResourceData(dbrows)
 	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
 	return &user.RoleCollection{
@@ -819,7 +819,7 @@ func (s *RoleService) dbToCollResourceWithPagination(count int64, dbrows []*dbRo
 	}, nil
 }
 
-func (s *RoleService) dbToCollResourceWithRelAndPagination(count int64, dbrows []*dbRole, pagenum, pagesize int64) (*user.RoleCollection, err) {
+func (s *RoleService) dbToCollResourceWithRelAndPagination(count int64, dbrows []*dbRole, pagenum, pagesize int64) (*user.RoleCollection, error) {
 	rdata := s.dbToCollResourceData(dbrows)
 	// related users
 	var users []*user.User

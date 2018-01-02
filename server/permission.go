@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/dictyBase/apihelpers/aphgrpc"
+	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/manyminds/api2go/jsonapi"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,20 +40,20 @@ type PermissionService struct {
 func NewPermissionService(dbh *runner.DB, pathPrefix string) *PermissionService {
 	return &PermissionService{
 		&aphgrpc.Service{
-			resource:   "permissions",
+			Resource:   "permissions",
 			Dbh:        dbh,
-			pathPrefix: pathPrefix,
-			filterToColumns: map[string]string{
+			PathPrefix: pathPrefix,
+			FilToColumns: map[string]string{
 				"permission":  "perm.permission",
 				"description": "perm.description",
 			},
-			fieldsToColumns: map[string]string{
+			FieldsToColumns: map[string]string{
 				"permission":  "perm.permission",
 				"description": "perm.description",
 				"created_at":  "perm.created_at",
 				"updated_at":  "perm.updated_at",
 			},
-			requiredAttrs: []string{"Permission"},
+			ReqAttrs: []string{"Permission"},
 		},
 	}
 }
@@ -64,16 +64,16 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.List
 		grpc.SetTrailer(ctx, md)
 		return &user.PermissionCollection{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.params = params
-	s.listMethod = true
+	s.Params = params
+	s.ListMethod = true
 	// has pagination query parameters
-	if aphgrpc.HasPagination {
+	if aphgrpc.HasPagination(r) {
 		switch {
 		// fields and filters
 		case params.HasFields && params.HasFilter:
-			s.fieldsStr = r.Fields
-			s.filterStr = r.Filter
-			count, err := s.getAllFilteredCount(permDbTable)
+			s.FieldsStr = r.Fields
+			s.FilterStr = r.Filter
+			count, err := s.GetAllFilteredCount(permDbTable)
 			if err != nil {
 				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -81,11 +81,11 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.List
 			if err != nil {
 				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize), nil
 		// fields only
 		case params.HasFields:
-			s.fieldsStr = r.Fields
-			count, err := s.getCount(permDbTable)
+			s.FieldsStr = r.Fields
+			count, err := s.GetCount(permDbTable)
 			if err != nil {
 				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -93,11 +93,11 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.List
 			if err != nil {
 				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize), nil
 		// filters only
 		case params.HasFilter:
-			s.filterStr = r.Filter
-			count, err := s.getAllFilteredCount(permDbTable)
+			s.FilterStr = r.Filter
+			count, err := s.GetAllFilteredCount(permDbTable)
 			if err != nil {
 				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -105,10 +105,10 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.List
 			if err != nil {
 				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize), nil
 		// only pagination
 		default:
-			count, err := s.getCount(permDbTable)
+			count, err := s.GetCount(permDbTable)
 			if err != nil {
 				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -122,59 +122,59 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.List
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter:
-		s.fieldsStr = r.Fields
-		s.filterStr = r.Filter
-		count, err := s.getAllFilteredCount(permDbTable)
+		s.FieldsStr = r.Fields
+		s.FilterStr = r.Filter
+		count, err := s.GetAllFilteredCount(permDbTable)
+		if err != nil {
+			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbrows, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbrows, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbrows), nil
 	case params.HasFields:
-		s.fieldsStr = r.Fields
-		count, err := s.getCount(permDbTable)
+		s.FieldsStr = r.Fields
+		count, err := s.GetCount(permDbTable)
+		if err != nil {
+			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbrows, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbrows, err := s.getAllSelectedRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbrows), nil
 	case params.HasFilter:
-		s.filterStr = r.Filter
-		count, err := s.getAllFilteredCount(permDbTable)
+		s.FilterStr = r.Filter
+		count, err := s.GetAllFilteredCount(permDbTable)
+		if err != nil {
+			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbrows, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbrows, err := s.getAllFilteredRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbrows), nil
 	default:
-		count, err := s.getCount(permDbTable)
+		count, err := s.GetCount(permDbTable)
+		if err != nil {
+			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbrows, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbrows, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbrows, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbrows), nil
 	}
@@ -191,14 +191,14 @@ func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.Update
 			Where("auth_permission_id = $1", r.Data.Id).Exec()
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
-			return &user.User{}, status.Error(codes.Internal, err.Error())
+			return &user.Permission{}, status.Error(codes.Internal, err.Error())
 		}
 	}
 	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
 }
 
 func (s *PermissionService) DeletePermission(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
-	if err := s.existsResource(r.Data.Id); err != nil {
+	if err := s.existsResource(r.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	_, err := s.Dbh.DeleteFrom("auth_permission").Where("auth_permission_id = $1", r.Id).Exec()
@@ -212,13 +212,14 @@ func (s *PermissionService) DeletePermission(ctx context.Context, r *jsonapi.Del
 // All helper functions
 
 func (s *PermissionService) existsResource(id int64) error {
-	return s.Dbh.Select("auth_permission_id").From("auth_permission").
+	_, err := s.Dbh.Select("auth_permission_id").From("auth_permission").
 		Where("auth_permission_id = $1", id).Exec()
+	return err
 }
 
 func (s *PermissionService) getResourceWithSelectedAttr(id int64) (*user.Permission, error) {
 	dperm := &dbPermission{}
-	columns := s.fieldsToColumns(s.params.Fields)
+	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From("auth_permission perm").
 		Where("perm.auth_permission_id = $1", id).QueryStruct(dperm)
@@ -241,7 +242,7 @@ func (s *PermissionService) getResource(id int64) (*user.Permission, error) {
 func (s *PermissionService) getAllRows() ([]*dbPermission, error) {
 	var dbrows []*dbPermission
 	err := s.Dbh.Select("auth_permission.*").
-		From(auth_permission).
+		From(permDbTable).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
@@ -257,7 +258,7 @@ func (s *PermissionService) getAllRowsWithPaging(pageNum int64, pageSize int64) 
 
 func (s *PermissionService) getAllSelectedRowsWithPaging(pageNum int64, pageSize int64) ([]*dbPermission, error) {
 	var dbrows []*dbPermission
-	columns := s.MapFieldsToColumns(s.params.Fields)
+	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From("auth_permission").
 		Paginate(uint64(pageNum), uint64(pageSize)).
@@ -267,11 +268,11 @@ func (s *PermissionService) getAllSelectedRowsWithPaging(pageNum int64, pageSize
 
 func (s *PermissionService) getAllFilteredRowsWithPaging(pageNum int64, pageSize int64) ([]*dbPermission, error) {
 	var dbrows []*dbPermission
-	err := s.Dbh.Select("auth_permission").
-		From(auth_permission).
+	err := s.Dbh.Select("auth_permission.*").
+		From(permDbTable).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.params.Filter),
-			aphgrpc.FilterToBindValue(s.params.Filter)...,
+			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
+			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
 		Paginate(uint64(pageNum), uint64(pageSize)).
 		QueryStructs(dbrows)
@@ -280,12 +281,12 @@ func (s *PermissionService) getAllFilteredRowsWithPaging(pageNum int64, pageSize
 
 func (s *PermissionService) getAllSelectedFilteredRowsWithPaging(pageNum int64, pageSize int64) ([]*dbPermission, error) {
 	var dbrows []*dbPermission
-	columns := s.MapFieldsToColumns(s.params.Fields)
+	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From("auth_permission").
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.params.Filter),
-			aphgrpc.FilterToBindValue(s.params.Filter)...,
+			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
+			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
 		Paginate(uint64(pageNum), uint64(pageSize)).
 		QueryStructs(dbrows)
@@ -298,7 +299,7 @@ func (s *PermissionService) buildResourceData(id int64, attr *user.PermissionAtt
 		Id:         id,
 		Attributes: attr,
 		Links: &jsonapi.Links{
-			Self: s.genSingularResSelfLink(id),
+			Self: s.GenResourceSelfLink(id),
 		},
 	}
 }
@@ -312,39 +313,39 @@ func (s *PermissionService) buildResource(id int64, attr *user.PermissionAttribu
 func (s *PermissionService) dbToResourceAttributes(dperm *dbPermission) *user.PermissionAttributes {
 	return &user.PermissionAttributes{
 		Permission:  dperm.Permission,
-		Description: dperm.Description,
-		CreatedAt:   dperm.CreatedAt,
-		UpdatedAt:   dperm.UpdatedAt,
+		Description: aphgrpc.NullToString(dperm.Description),
+		CreatedAt:   aphgrpc.NullToTime(dperm.CreatedAt),
+		UpdatedAt:   aphgrpc.NullToTime(dperm.UpdatedAt),
 	}
 }
 
 func (s *PermissionService) attrTodbPermission(attr *user.PermissionAttributes) *dbPermission {
 	return &dbPermission{
 		Permission:  attr.Permission,
-		Description: attr.Description,
-		CreatedAt:   attr.CreatedAt,
-		UpdatedAt:   attr.UpdatedAt,
+		Description: dat.NullStringFrom(attr.Description),
+		CreatedAt:   dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.CreatedAt)),
+		UpdatedAt:   dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.UpdatedAt)),
 	}
 }
 
-func (s *PermissionService) dbToCollResourceData(dbrows []*dbPermission) *user.PermissionData {
+func (s *PermissionService) dbToCollResourceData(dbrows []*dbPermission) []*user.PermissionData {
 	var pdata []*user.PermissionData
 	for _, dperm := range dbrows {
-		pdata = append(pdata, s.buildResourceData(dperm.AuthPermissionId, mapPermissionAttributes(dperm)))
+		pdata = append(pdata, s.buildResourceData(aphgrpc.NullToInt64(dperm.AuthPermissionId), s.dbToResourceAttributes(dperm)))
 	}
 	return pdata
 }
 
-func (s *PermissionService) dbToCollResource(dbrows []*dbPermission) (*user.PermissionCollection, error) {
+func (s *PermissionService) dbToCollResource(dbrows []*dbPermission) *user.PermissionCollection {
 	return &user.PermissionCollection{
 		Data: s.dbToCollResourceData(dbrows),
 		Links: &jsonapi.PaginationLinks{
 			Self: s.genCollectionResSelfLink(),
 		},
-	}, nil
+	}
 }
 
-func (s *PermissionService) dbToCollResourceWithPagination(count int64, dbPermissions []*dbPermission, pagenum, pagesize int64) (*user.PermissionCollection, err) {
+func (s *PermissionService) dbToCollResourceWithPagination(count int64, dbPermissions []*dbPermission, pagenum, pagesize int64) *user.PermissionCollection {
 	udata := s.dbToCollResourceData(dbPermissions)
 	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
 	return &user.PermissionCollection{
@@ -358,5 +359,5 @@ func (s *PermissionService) dbToCollResourceWithPagination(count int64, dbPermis
 				Number:  pagenum,
 			},
 		},
-	}, nil
+	}
 }
