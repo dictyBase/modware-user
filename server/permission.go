@@ -60,67 +60,14 @@ func NewPermissionService(dbh *runner.DB, pathPrefix string) *PermissionService 
 	}
 }
 
-func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.ListRequest) (*user.PermissionCollection, error) {
-	params, md, err := aphgrpc.ValidateAndParseListParams(s, r)
+func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.SimpleListRequest) (*user.PermissionCollection, error) {
+	params, md, err := aphgrpc.ValidateAndParseSimpleListParams(s, r)
 	if err != nil {
 		grpc.SetTrailer(ctx, md)
 		return &user.PermissionCollection{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	s.Params = params
 	s.ListMethod = true
-	// has pagination query parameters
-	if aphgrpc.HasPagination(r) {
-		switch {
-		// fields and filters
-		case params.HasFields && params.HasFilter:
-			s.FieldsStr = r.Fields
-			s.FilterStr = r.Filter
-			count, err := s.GetAllFilteredCount(permDbTable)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			dbrows, err := s.getAllSelectedFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize), nil
-		// fields only
-		case params.HasFields:
-			s.FieldsStr = r.Fields
-			count, err := s.GetCount(permDbTable)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			dbrows, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize), nil
-		// filters only
-		case params.HasFilter:
-			s.FilterStr = r.Filter
-			count, err := s.GetAllFilteredCount(permDbTable)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			dbrows, err := s.getAllFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize), nil
-		// only pagination
-		default:
-			count, err := s.GetCount(permDbTable)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			dbrows, err := s.getAllRowsWithPaging(r.Pagenum, r.Pagesize)
-			if err != nil {
-				return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbrows, r.Pagenum, r.Pagesize), nil
-		}
-	}
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter:
