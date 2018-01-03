@@ -4,6 +4,7 @@ import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
@@ -132,18 +133,18 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 	case params.HasFields && params.HasInclude:
 		s.IncludeStr = r.Include
 		s.FieldsStr = r.Fields
-		u, err := s.getResourceWithSelectedAttr(params, r.Id)
+		u, err := s.getResourceWithSelectedAttr(r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
-		err = s.buildResourceRelationships(id, u)
+		err = s.buildResourceRelationships(r.Id, u)
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
 		return u, nil
 	case params.HasFields:
 		s.FieldsStr = r.Fields
-		u, err := s.getResourceWithSelectedAttr(params, r.Id)
+		u, err := s.getResourceWithSelectedAttr(r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -154,7 +155,7 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
-		err = s.buildResourceRelationships(id, u)
+		err = s.buildResourceRelationships(r.Id, u)
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -175,11 +176,11 @@ func (s *UserService) GetRelatedRoles(ctx context.Context, r *jsonapi.Relationsh
 	}
 	return &user.RoleCollection{
 		Data: rdata,
-		Links: &jsonapi.PaginationLinks{
+		Links: &jsonapi.Links{
 			Self: NewRoleService(
 				s.Dbh,
 				"roles",
-			).genCollResourceSelfLink(),
+			).GenCollResourceSelfLink(),
 		},
 	}, nil
 }
@@ -188,19 +189,19 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	params, md, err := aphgrpc.ValidateAndParseListParams(s, r)
 	if err != nil {
 		grpc.SetTrailer(ctx, md)
-		return new(user.User), status.Error(codes.InvalidArgument, err.Error())
+		return &user.UserCollection{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	s.Params = params
 	s.ListMethod = true
 	// has pagination query parameters
-	if aphgrpc.HasPagination {
+	if aphgrpc.HasPagination(r) {
 		switch {
 		// filter, fields and include parameters
 		case params.HasFields && params.HasInclude && params.HasFilter:
 			s.FieldsStr = r.Fields
 			s.FilterStr = r.Filter
 			s.IncludeStr = r.Include
-			count, err := s.getAllFilteredCount(usrTablesJoin)
+			count, err := s.GetAllFilteredCount(usrTablesJoin)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -213,7 +214,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasFields && params.HasInclude:
 			s.FieldsStr = r.Fields
 			s.IncludeStr = r.Include
-			count, err := s.getCount(userDbTable)
+			count, err := s.GetCount(userDbTable)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -226,20 +227,20 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasFields && params.HasFilter:
 			s.FieldsStr = r.Fields
 			s.FilterStr = r.Filter
-			count, err := s.getAllFilteredCount(usrTablesJoin)
+			count, err := s.GetAllFilteredCount(usrTablesJoin)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(params, r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
 		// include and filter
 		case params.HasInclude && params.HasFilter:
 			s.IncludeStr = r.Include
 			s.FilterStr = r.Filter
-			count, err := s.getAllFilteredCount(usrTablesJoin)
+			count, err := s.GetAllFilteredCount(usrTablesJoin)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -250,7 +251,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
 		case params.HasFields:
 			s.FieldsStr = r.Fields
-			count, err := s.getCount(userDbTable)
+			count, err := s.GetCount(userDbTable)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -258,10 +259,10 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
 		case params.HasFilter:
 			s.FilterStr = r.Filter
-			count, err := s.getAllFilteredCount(usrTablesJoin)
+			count, err := s.GetAllFilteredCount(usrTablesJoin)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -269,10 +270,10 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
 		case params.HasInclude:
 			s.IncludeStr = r.Include
-			count, err := s.getCount(userDbTable)
+			count, err := s.GetCount(userDbTable)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -283,7 +284,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
 		// only pagination
 		default:
-			count, err := s.getCount(userDbTable)
+			count, err := s.GetCount(userDbTable)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -300,116 +301,116 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		s.FieldsStr = r.Fields
 		s.FilterStr = r.Filter
 		s.IncludeStr = r.Include
-		count, err := s.getAllFilteredCount(usrTablesJoin)
+		count, err := s.GetAllFilteredCount(usrTablesJoin)
+		if err != nil {
+			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
-			}
 			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFields && params.HasFilter:
 		s.FieldsStr = r.Fields
 		s.FilterStr = r.Filter
-		count, err := s.getAllFilteredCount(usrTablesJoin)
+		count, err := s.GetAllFilteredCount(usrTablesJoin)
+		if err != nil {
+			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFields && params.HasInclude:
 		s.FieldsStr = r.Fields
 		s.IncludeStr = r.Include
-		count, err := s.getCount("auth_user")
+		count, err := s.GetCount("auth_user")
+		if err != nil {
+			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbUsers, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbUsers, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
-			}
 			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFilter && params.HasInclude:
 		s.IncludeStr = r.Include
 		s.FilterStr = r.Filter
-		count, err := s.getAllFilteredCount(usrTablesJoin)
+		count, err := s.GetAllFilteredCount(usrTablesJoin)
+		if err != nil {
+			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbUsers, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbUsers, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
-			}
 			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFields:
 		s.FieldsStr = r.Fields
-		count, err := s.getCount(userDbTable)
+		count, err := s.GetCount(userDbTable)
+		if err != nil {
+			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbUsers, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbUsers, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFilter:
 		s.FilterStr = r.Filter
-		count, err := s.getAllFilteredCount(usrTablesJoin)
+		count, err := s.GetAllFilteredCount(usrTablesJoin)
+		if err != nil {
+			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbUsers, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbUsers, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasInclude:
 		s.IncludeStr = r.Include
-		count, err := s.getCount(userDbTable)
+		count, err := s.GetCount(userDbTable)
+		if err != nil {
+			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbUsers, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbUsers, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
-			}
 			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbUsers), nil
 	default:
-		count, err := s.getCount("auth_user")
+		count, err := s.GetCount("auth_user")
+		if err != nil {
+			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbUsers, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbUsers, err := s.getAllPaginatedRows(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbUsers), nil
 	}
@@ -418,7 +419,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest) (*user.User, error) {
 	var userId int64
 	dbcuser := s.attrTodbCoreUser(r.Data.Attributes)
-	_, err := s.Dbh.InsertInto("auth_user").
+	err := s.Dbh.InsertInto("auth_user").
 		Columns(coreUserCols...).
 		Record(dbcuser).
 		Returning("auth_user_id").QueryScalar(&userId)
@@ -456,13 +457,13 @@ func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	for _, rd := range r.Data {
-		err := s.Dbh.Select("aurole.auth_user_role_id").
+		_, err := s.Dbh.Select("aurole.auth_user_role_id").
 			From("auth_user_role aurole").
 			Where("aurole.auth_user_id = $1 AND aurole.auth_role_id = $2", r.Id, rd.Id).
 			Exec()
 		if err != nil {
 			if err == dat.ErrNotFound {
-				err := s.Dbh.InsertInto("auth_user_role").
+				_, err := s.Dbh.InsertInto("auth_user_role").
 					Columns("auth_user_id", "auth_role_id").
 					Values(r.Id, rd.Id).Exec()
 				if err != nil {
@@ -502,7 +503,7 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 		}
 	}
 	for _, role := range r.Data.Relationships.Roles.Data {
-		_, err = s.Dbh.Update("auth_user_role").
+		_, err := s.Dbh.Update("auth_user_role").
 			Set("auth_role_id", role.Id).
 			Where("auth_user_id = $1", r.Data.Id).Exec()
 		if err != nil {
@@ -525,7 +526,7 @@ func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
 	}
 	for _, rd := range r.Data {
-		err := s.Dbh.InsertInto("auth_user_role").
+		_, err := s.Dbh.InsertInto("auth_user_role").
 			Columns("auth_user_id", "auth_role_id").
 			Values(r.Id, rd.Id).Exec()
 		if err != nil {
@@ -537,7 +538,7 @@ func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
-	if err := s.existsResource(r.Data.Id); err != nil {
+	if err := s.existsResource(r.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	_, err := s.Dbh.DeleteFrom(userDbTable).Where("user.auth_user_id = $1", r.Id).Exec()
@@ -567,15 +568,16 @@ func (s *UserService) DeleteRoleRelationship(ctx context.Context, r *jsonapi.Dat
 // All helper functions
 
 func (s *UserService) existsResource(id int64) error {
-	return s.Dbh.Select("user.auth_user_id").From(userDbTable).
+	_, err := s.Dbh.Select("user.auth_user_id").From(userDbTable).
 		Where("user.auth_user_id = $1", id).Exec()
+	return err
 }
 
 // -- Functions that queries the storage and generates an user resource object
 
 func (s *UserService) getResourceWithSelectedAttr(id int64) (*user.User, error) {
 	dusr := new(dbUser)
-	columns := s.fieldsToColumns(s.Params.Fields)
+	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).From(usrTablesJoin).
 		Where("user.auth_user_id = $1", id).QueryStruct(dusr)
 	if err != nil {
@@ -620,7 +622,7 @@ func (s *UserService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(usrTablesJoin).
-		Paginate(uint64(pageNum), uint64(pageSize)).
+		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dusrRows)
 	return dusrRows, err
 }
@@ -630,10 +632,10 @@ func (s *UserService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*
 	err := s.Dbh.Select("user.*", "uinfo.*").
 		From(usrTablesJoin).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.Params.Filter),
-			aphgrpc.FilterToBindValue(s.Params.Filter)...,
+			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
+			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		Paginate(uint64(pageNum), uint64(pageSize)).
+		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dusrRows)
 	return dusrRows, err
 }
@@ -644,10 +646,10 @@ func (s *UserService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int
 	err := s.Dbh.Select(columns...).
 		From(usrTablesJoin).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.Params.Filter),
-			aphgrpc.FilterToBindValue(s.Params.Filter)...,
+			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
+			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		Paginate(uint64(pageNum), uint64(pageSize)).
+		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dusrRows)
 	return dusrRows, err
 }
@@ -695,7 +697,7 @@ func (s *UserService) buildResourceData(id int64, uattr *user.UserAttributes) *u
 			},
 		},
 		Links: &jsonapi.Links{
-			Self: s.genSingularResSelfLink(id),
+			Self: s.GenResourceSelfLink(id),
 		},
 	}
 }
@@ -712,12 +714,12 @@ func (s *UserService) buildResourceRelationships(id int64, user *user.User) erro
 	if err != nil {
 		return err
 	}
-	incRoles, err := aphgrpc.ConvertAllToAny(roles)
+	incRoles, err := NewRoleService(s.Dbh, "roles").convertAllToAny(roles)
 	if err != nil {
 		return err
 	}
 	allInc = append(allInc, incRoles...)
-	user.Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
+	user.Data.Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 	user.Included = allInc
 	return nil
 }
@@ -731,17 +733,17 @@ func (s *UserService) dbToResourceAttributes(dusr *dbUser) *user.UserAttributes 
 		LastName:      dusr.LastName,
 		Email:         dusr.Email,
 		IsActive:      dusr.IsActive,
-		Organization:  dusr.Organization,
-		GroupName:     dusr.GroupName,
-		FirstAddress:  dusr.FirstAddress,
-		SecondAddress: dusr.SecondAddress,
-		City:          dusr.City,
-		State:         dusr.State,
-		Zipcode:       dusr.Zipcode,
-		Country:       dusr.Country,
-		Phone:         dusr.Phone,
-		CreatedAt:     dusr.CreatedAt,
-		UpdatedAt:     dusr.UpdatedAt,
+		Organization:  aphgrpc.NullToString(dusr.Organization),
+		GroupName:     aphgrpc.NullToString(dusr.GroupName),
+		FirstAddress:  aphgrpc.NullToString(dusr.FirstAddress),
+		SecondAddress: aphgrpc.NullToString(dusr.SecondAddress),
+		City:          aphgrpc.NullToString(dusr.City),
+		State:         aphgrpc.NullToString(dusr.State),
+		Zipcode:       aphgrpc.NullToString(dusr.Zipcode),
+		Country:       aphgrpc.NullToString(dusr.Country),
+		Phone:         aphgrpc.NullToString(dusr.Phone),
+		CreatedAt:     aphgrpc.NullToTime(dusr.CreatedAt),
+		UpdatedAt:     aphgrpc.NullToTime(dusr.UpdatedAt),
 	}
 }
 
@@ -754,18 +756,18 @@ func (s *UserService) dbToCollResourceData(dbUsers []*dbUser) []*user.UserData {
 
 }
 
-func (s *UserService) dbToCollResource(dbUsers []*dbUser) (*user.UserCollection, error) {
+func (s *UserService) dbToCollResource(dbUsers []*dbUser) *user.UserCollection {
 	return &user.UserCollection{
 		Data: s.dbToCollResourceData(dbUsers),
 		Links: &jsonapi.PaginationLinks{
-			Self: s.genCollResourceSelfLink(),
+			Self: s.GenCollResourceSelfLink(),
 		},
-	}, nil
+	}
 }
 
-func (s *UserService) dbToCollResourceWithPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) (*user.UserCollection, error) {
+func (s *UserService) dbToCollResourceWithPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) *user.UserCollection {
 	udata := s.dbToCollResourceData(dbUsers)
-	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
+	jsLinks, pages := s.GetPagination(count, pagenum, pagesize)
 	return &user.UserCollection{
 		Data:  udata,
 		Links: jsLinks,
@@ -777,25 +779,25 @@ func (s *UserService) dbToCollResourceWithPagination(count int64, dbUsers []*dbU
 				Number:  pagenum,
 			},
 		},
-	}, nil
+	}
 }
 
 func (s *UserService) dbToCollResourceWithRelAndPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) (*user.UserCollection, error) {
 	udata := s.dbToCollResourceData(dbUsers)
-	var allRoles []*user.Role
+	var allRoles []*user.RoleData
 	for i, _ := range udata {
 		roles, err := s.getRoleResourceData(dbUsers[i].AuthUserId)
 		if err != nil {
-			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+			return &user.UserCollection{}, err
 		}
 		udata[i].Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 		allRoles = append(allRoles, roles...)
 	}
-	incRoles, err := aphgrpc.ConvertAllToAny(allRoles)
+	incRoles, err := NewRoleService(s.Dbh, "roles").convertAllToAny(allRoles)
 	if err != nil {
-		return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+		return &user.UserCollection{}, err
 	}
-	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
+	jsLinks, pages := s.GetPagination(count, pagenum, pagesize)
 	return &user.UserCollection{
 		Data:     udata,
 		Links:    jsLinks,
@@ -824,15 +826,27 @@ func (s *UserService) attrTodbCoreUser(attr *user.UserAttributes) *dbCoreUser {
 
 func (s *UserService) attrTodbUserInfo(attr *user.UserAttributes) *dbUserInfo {
 	return &dbUserInfo{
-		Organization:  attr.Organization,
-		GroupName:     attr.GroupName,
-		FirstAddress:  attr.FirstAddress,
-		SecondAddress: attr.SecondAddress,
-		City:          attr.City,
-		State:         attr.State,
-		Zipcode:       attr.Zipcode,
-		Country:       attr.Country,
-		CreatedAt:     attr.CreatedAt,
-		UpdatedAt:     attr.UpdatedAt,
+		Organization:  dat.NullStringFrom(attr.Organization),
+		GroupName:     dat.NullStringFrom(attr.GroupName),
+		FirstAddress:  dat.NullStringFrom(attr.FirstAddress),
+		SecondAddress: dat.NullStringFrom(attr.SecondAddress),
+		City:          dat.NullStringFrom(attr.City),
+		State:         dat.NullStringFrom(attr.State),
+		Zipcode:       dat.NullStringFrom(attr.Zipcode),
+		Country:       dat.NullStringFrom(attr.Country),
+		CreatedAt:     dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.CreatedAt)),
+		UpdatedAt:     dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.UpdatedAt)),
 	}
+}
+
+func (s *UserService) convertAllToAny(users []*user.UserData) ([]*any.Any, error) {
+	aslice := make([]*any.Any, len(users))
+	for i, u := range users {
+		pkg, err := ptypes.MarshalAny(u)
+		if err != nil {
+			return aslice, err
+		}
+		aslice[i] = pkg
+	}
+	return aslice, nil
 }

@@ -6,6 +6,8 @@ import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -339,25 +341,30 @@ func (s *PermissionService) dbToCollResourceData(dbrows []*dbPermission) []*user
 func (s *PermissionService) dbToCollResource(dbrows []*dbPermission) *user.PermissionCollection {
 	return &user.PermissionCollection{
 		Data: s.dbToCollResourceData(dbrows),
-		Links: &jsonapi.PaginationLinks{
-			Self: s.genCollectionResSelfLink(),
+		Links: &jsonapi.Links{
+			Self: s.GenCollResourceSelfLink(),
 		},
 	}
 }
 
 func (s *PermissionService) dbToCollResourceWithPagination(count int64, dbPermissions []*dbPermission, pagenum, pagesize int64) *user.PermissionCollection {
 	udata := s.dbToCollResourceData(dbPermissions)
-	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
 	return &user.PermissionCollection{
-		Data:  udata,
-		Links: jsLinks,
-		Meta: &jsonapi.Meta{
-			Pagination: &jsonapi.Pagination{
-				Records: count,
-				Total:   pages,
-				Size:    pagesize,
-				Number:  pagenum,
-			},
+		Data: udata,
+		Links: &jsonapi.Links{
+			Self: s.GenCollResourceSelfLink(),
 		},
 	}
+}
+
+func (s *PermissionService) convertAllToAny(perms []*user.PermissionData) ([]*any.Any, error) {
+	aslice := make([]*any.Any, len(perms))
+	for i, p := range perms {
+		pkg, err := ptypes.MarshalAny(p)
+		if err != nil {
+			return aslice, err
+		}
+		aslice[i] = pkg
+	}
+	return aslice, nil
 }

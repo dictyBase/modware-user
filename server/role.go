@@ -11,6 +11,7 @@ import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/empty"
 	dat "gopkg.in/mgutz/dat.v1"
@@ -23,7 +24,7 @@ const (
 )
 
 type dbRole struct {
-	AuthRoleId  string       `db:"auth_role_id"`
+	AuthRoleId  int64        `db:"auth_role_id"`
 	Role        string       `db:"role"`
 	Description string       `db:"description"`
 	CreatedAt   dat.NullTime `db:"created_at"`
@@ -68,18 +69,18 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 	case params.HasFields && params.HasInclude:
 		s.IncludeStr = r.Include
 		s.FieldsStr = r.Fields
-		role, err := s.getResourceWithSelectedAttr(params, r.Id)
+		role, err := s.getResourceWithSelectedAttr(r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
-		err = s.buildResourceRelationships(id, role)
+		err = s.buildResourceRelationships(r.Id, role)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
 		return role, nil
 	case params.HasFields:
 		s.FieldsStr = r.Fields
-		role, err := s.getResourceWithSelectedAttr(params, r.Id)
+		role, err := s.getResourceWithSelectedAttr(r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -90,7 +91,7 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
-		err = s.buildResourceRelationships(id, role)
+		err = s.buildResourceRelationships(r.Id, role)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -105,7 +106,7 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 }
 
 func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.RelationshipRequest) (*user.UserCollection, error) {
-	udata, err := s.getUserResourceData(id)
+	udata, err := s.getUserResourceData(r.Id)
 	if err != nil {
 		return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 	}
@@ -115,7 +116,7 @@ func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.Relationsh
 			Self: NewUserService(
 				s.Dbh,
 				"users",
-			).genCollResourceSelfLink(),
+			).GenCollResourceSelfLink(),
 		},
 	}, nil
 }
@@ -127,11 +128,11 @@ func (s *RoleService) GetRelatedPermissions(ctx context.Context, r *jsonapi.Rela
 	}
 	return &user.PermissionCollection{
 		Data: pdata,
-		Links: &jsonapi.PaginationLinks{
+		Links: &jsonapi.Links{
 			Self: NewPermissionService(
 				s.Dbh,
 				"permissions",
-			).genCollResourceSelfLink(),
+			).GenCollResourceSelfLink(),
 		},
 	}, nil
 }
@@ -145,14 +146,14 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 	s.Params = params
 	s.ListMethod = true
 	// has pagination query parameters
-	if aphgrpc.HasPagination {
+	if aphgrpc.HasPagination(r) {
 		switch {
 		// filter, fields and include parameters
 		case params.HasFields && params.HasInclude && params.HasFilter:
 			s.FieldsStr = r.Fields
 			s.FilterStr = r.Filter
 			s.IncludeStr = r.Include
-			count, err := s.getAllFilteredCount(roleDbTable)
+			count, err := s.GetAllFilteredCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -165,7 +166,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasFields && params.HasInclude:
 			s.FieldsStr = r.Fields
 			s.IncludeStr = r.Include
-			count, err := s.getCount(userDbTable)
+			count, err := s.GetCount(userDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -178,20 +179,20 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasFields && params.HasFilter:
 			s.FieldsStr = r.Fields
 			s.FilterStr = r.Filter
-			count, err := s.getAllFilteredCount(roleDbTable)
+			count, err := s.GetAllFilteredCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(params, r.Pagenum, r.Pagesize)
+			dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize), nil
 		// include and filter
 		case params.HasInclude && params.HasFilter:
 			s.IncludeStr = r.Include
 			s.FilterStr = r.Filter
-			count, err := s.getAllFilteredCount(roleDbTable)
+			count, err := s.GetAllFilteredCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -202,7 +203,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
 		case params.HasFields:
 			s.FieldsStr = r.Fields
-			count, err := s.getCount(roleDbTable)
+			count, err := s.GetCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -210,10 +211,10 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize), nil
 		case params.HasFilter:
 			s.FilterStr = r.Filter
-			count, err := s.getAllFilteredCount(roleDbTable)
+			count, err := s.GetAllFilteredCount(roleDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -221,10 +222,10 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithPagination(count, dbRoles, r.Pagenum, r.Pagesize), nil
 		case params.HasInclude:
 			s.IncludeStr = r.Include
-			count, err := s.getCount(userDbTable)
+			count, err := s.GetCount(userDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -235,7 +236,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, r.Pagenum, r.Pagesize)
 		// only pagination
 		default:
-			count, err := s.getCount(userDbTable)
+			count, err := s.GetCount(userDbTable)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -252,116 +253,125 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.ListRequest) (*u
 		s.FieldsStr = r.Fields
 		s.FilterStr = r.Filter
 		s.IncludeStr = r.Include
-		count, err := s.getAllFilteredCount(roleDbTable)
+		count, err := s.GetAllFilteredCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
-			}
 			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFields && params.HasFilter:
 		s.FieldsStr = r.Fields
 		s.FilterStr = r.Filter
-		count, err := s.getAllFilteredCount(roleDbTable)
+		count, err := s.GetAllFilteredCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbRoles, err := s.getAllSelectedFilteredRowsWithPaging(params, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFields && params.HasInclude:
 		s.FieldsStr = r.Fields
 		s.IncludeStr = r.Include
-		count, err := s.getCount(roleDbTable)
+		count, err := s.GetCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbRoles, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbRoles, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
-			}
 			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFilter && params.HasInclude:
 		s.IncludeStr = r.Include
 		s.FilterStr = r.Filter
-		count, err := s.getAllFilteredCount(roleDbTable)
+		count, err := s.GetAllFilteredCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbRoles, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbRoles, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
-			}
 			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFields:
 		s.FieldsStr = r.Fields
-		count, err := s.getCount(roleDbTable)
+		count, err := s.GetCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbRoles, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbRoles, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasFilter:
 		s.FilterStr = r.Filter
-		count, err := s.getAllFilteredCount(roleDbTable)
+		count, err := s.GetAllFilteredCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbRoles, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbRoles, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(
+				count,
+				dbRoles,
+				aphgrpc.DefaultPagenum,
+				aphgrpc.DefaultPagesize,
+			), nil
 		}
 		return s.dbToCollResource(dbRoles), nil
 	case params.HasInclude:
 		s.IncludeStr = r.Include
-		count, err := s.getCount(roleDbTable)
+		count, err := s.GetCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbRoles, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbRoles, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			r, err := s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 			if err != nil {
 				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithRelAndPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return r, nil
 		}
 		return s.dbToCollResource(dbRoles), nil
 	default:
-		count, err := s.getCount(roleDbTable)
+		count, err := s.GetCount(roleDbTable)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		dbRoles, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			dbRoles, err := s.getAllPaginatedRows(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
-			if err != nil {
-				return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
-			}
-			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithPagination(count, dbRoles, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbRoles), nil
 	}
@@ -372,22 +382,22 @@ func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest)
 	dbrole := s.attrTodbRole(r.Data.Attributes)
 	rcolumns := aphgrpc.GetDefinedTags(dbrole, "db")
 	if len(rcolumns) > 0 {
-		_, err := s.Dbh.InsertInto("auth_role").
+		err := s.Dbh.InsertInto("auth_role").
 			Columns(rcolumns...).
 			Record(dbrole).
 			Returning("auth_role_id").QueryScalar(&roleId)
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-			return &user.User{}, status.Error(codes.Internal, err.Error())
+			return &user.Role{}, status.Error(codes.Internal, err.Error())
 		}
 	}
 	for _, u := range r.Data.Relationships.Users.Data {
-		_, err = s.Dbh.InsertInto("auth_user_role").
+		_, err := s.Dbh.InsertInto("auth_user_role").
 			Columns("auth_user_id", "auth_role_id").
 			Values(u.Id, roleId).Exec()
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-			return &user.User{}, status.Error(codes.Internal, err.Error())
+			return &user.Role{}, status.Error(codes.Internal, err.Error())
 		}
 	}
 	for _, p := range r.Data.Relationships.Permissions.Data {
@@ -396,7 +406,7 @@ func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest)
 			Values(roleId, p.Id).Exec()
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-			return &user.User{}, status.Error(codes.Internal, err.Error())
+			return &user.Role{}, status.Error(codes.Internal, err.Error())
 		}
 	}
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
@@ -408,13 +418,13 @@ func (s *RoleService) CreateUserRelationship(ctx context.Context, r *jsonapi.Dat
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	for _, ud := range r.Data {
-		err := s.Dbh.Select("aurole.auth_user_role_id").
+		_, err := s.Dbh.Select("aurole.auth_user_role_id").
 			From("auth_user_role aurole").
 			Where("aurole.auth_role_id = $1 AND aurole.auth_user_role_id = $2", r.Id, ud.Id).
 			Exec()
 		if err != nil {
 			if err == dat.ErrNotFound {
-				err := s.Dbh.InsertInto("auth_user_role").
+				_, err := s.Dbh.InsertInto("auth_user_role").
 					Columns("auth_role_id", "auth_user_id").
 					Values(r.Id, ud.Id).Exec()
 				if err != nil {
@@ -434,13 +444,13 @@ func (s *RoleService) CreatePermissionRelationship(ctx context.Context, r *jsona
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	for _, pd := range r.Data {
-		err := s.Dbh.Select("auth_role_permission.auth_role_permission_id").
+		_, err := s.Dbh.Select("auth_role_permission.auth_role_permission_id").
 			From("auth_role_permission").
 			Where("auth_role_permission.auth_role_id = $1 AND auth_role_permission.auth_permission_id = $2", r.Id, pd.Id).
 			Exec()
 		if err != nil {
 			if err == dat.ErrNotFound {
-				err := s.Dbh.InsertInto("auth_role_permission").
+				_, err := s.Dbh.InsertInto("auth_role_permission").
 					Columns("auth_role_id", "auth_permission_id").
 					Values(r.Id, pd.Id).Exec()
 				if err != nil {
@@ -470,7 +480,7 @@ func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest)
 		}
 	}
 	for _, u := range r.Data.Relationships.Users.Data {
-		_, err = s.Dbh.Update("auth_user_role").
+		_, err := s.Dbh.Update("auth_user_role").
 			Set("auth_user_id", u.Id).
 			Where("auth_role_id = $1", r.Data.Id).Exec()
 		if err != nil {
@@ -493,7 +503,7 @@ func (s *RoleService) UpdateUserRelationship(ctx context.Context, r *jsonapi.Dat
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
 	}
 	for _, ud := range r.Data {
-		err := s.Dbh.InsertInto("auth_user_role").
+		_, err := s.Dbh.InsertInto("auth_user_role").
 			Columns("auth_role_id", "auth_user_id").
 			Values(r.Id, ud.Id).Exec()
 		if err != nil {
@@ -516,7 +526,7 @@ func (s *RoleService) UpdatePermissionRelationship(ctx context.Context, r *jsona
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
 	}
 	for _, pd := range r.Data {
-		err := s.Dbh.InsertInto("auth_role_permission").
+		_, err := s.Dbh.InsertInto("auth_role_permission").
 			Columns("auth_role_id", "auth_permission_id").
 			Values(r.Id, pd.Id).Exec()
 		if err != nil {
@@ -528,7 +538,7 @@ func (s *RoleService) UpdatePermissionRelationship(ctx context.Context, r *jsona
 }
 
 func (s *RoleService) DeleteRole(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
-	if err := s.existsResource(r.Data.Id); err != nil {
+	if err := s.existsResource(r.Id); err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	_, err := s.Dbh.DeleteFrom(roleDbTable).Where("auth_role_id = $1", r.Id).Exec()
@@ -572,13 +582,14 @@ func (s *RoleService) DeletePermissionRelationship(ctx context.Context, r *jsona
 }
 
 func (s *RoleService) existsResource(id int64) error {
-	return s.Dbh.Select("auth_role_id").From("auth_role").
+	_, err := s.Dbh.Select("auth_role_id").From("auth_role").
 		Where("auth_role_id = $1", id).Exec()
+	return err
 }
 
 func (s *RoleService) getResourceWithSelectedAttr(id int64) (*user.Role, error) {
 	drole := &dbRole{}
-	columns := s.fieldsToColumns(s.Params.Fields)
+	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).From(roleDbTblAlias).
 		Where("role.auth_role_id = $1", id).QueryStruct(drole)
 	if err != nil {
@@ -621,7 +632,7 @@ func (s *RoleService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(roleDbTblAlias).
-		Paginate(uint64(pageNum), uint64(pageSize)).
+		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
@@ -631,10 +642,10 @@ func (s *RoleService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*
 	err := s.Dbh.Select("role.*").
 		From(roleDbTblAlias).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.Params.Filter),
-			aphgrpc.FilterToBindValue(s.Params.Filter)...,
+			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
+			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		Paginate(uint64(pageNum), uint64(pageSize)).
+		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
@@ -645,10 +656,10 @@ func (s *RoleService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int
 	err := s.Dbh.Select(columns...).
 		From(roleDbTblAlias).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.Params.Filter),
-			aphgrpc.FilterToBindValue(s.Params.Filter)...,
+			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
+			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		Paginate(uint64(pageNum), uint64(pageSize)).
+		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
@@ -732,7 +743,7 @@ func (s *RoleService) buildResourceData(id int64, attr *user.RoleAttributes) *us
 			},
 		},
 		Links: &jsonapi.Links{
-			Self: s.genSingularResSelfLink(id),
+			Self: s.GenResourceSelfLink(id),
 		},
 	}
 }
@@ -745,7 +756,7 @@ func (s *RoleService) buildResource(id int64, attr *user.RoleAttributes) *user.R
 
 func (s *RoleService) buildResourceRelationships(id int64, role *user.Role) error {
 	var allInc []*any.Any
-	for _, inc := range s.parse.Includes {
+	for _, inc := range s.Params.Includes {
 		switch inc {
 		case "users":
 			users, err := s.getUserResourceData(id)
@@ -753,23 +764,23 @@ func (s *RoleService) buildResourceRelationships(id int64, role *user.Role) erro
 				return err
 			}
 			// included relationships
-			incUsers, err := aphgrpc.ConvertAllToAny(users)
+			incUsers, err := NewUserService(s.Dbh, "users").convertAllToAny(users)
 			if err != nil {
 				return err
 			}
 			allInc = append(allInc, incUsers...)
-			role.Relationships.Users.Data = s.buildUserResourceIdentifiers(users)
+			role.Data.Relationships.Users.Data = s.buildUserResourceIdentifiers(users)
 		case "permissions":
 			perms, err := s.getPermissionResourceData(id)
 			if err != nil {
 				return err
 			}
-			incPerms, err := aphgrpc.ConvertAllToAny(perms)
+			incPerms, err := NewPermissionService(s.Dbh, "permissions").convertAllToAny(perms)
 			if err != nil {
 				return err
 			}
 			allInc = append(allInc, incPerms...)
-			role.Relationships.Permissions.Data = s.buildPermissionResourceIdentifiers(perms)
+			role.Data.Relationships.Permissions.Data = s.buildPermissionResourceIdentifiers(perms)
 		}
 		role.Included = allInc
 	}
@@ -780,8 +791,8 @@ func (s *RoleService) dbToResourceAttributes(r *dbRole) *user.RoleAttributes {
 	return &user.RoleAttributes{
 		Role:        r.Role,
 		Description: r.Description,
-		CreatedAt:   r.CreatedAt,
-		UpdatedAt:   r.UpdatedAt,
+		CreatedAt:   aphgrpc.NullToTime(r.CreatedAt),
+		UpdatedAt:   aphgrpc.NullToTime(r.UpdatedAt),
 	}
 }
 
@@ -793,78 +804,64 @@ func (s *RoleService) dbToCollResourceData(dbrows []*dbRole) []*user.RoleData {
 	return rdata
 }
 
-func (s *RoleService) dbToCollResource(dbrows []*dbRole) (*user.RoleCollection, error) {
+func (s *RoleService) dbToCollResource(dbrows []*dbRole) *user.RoleCollection {
 	return &user.RoleCollection{
 		Data: s.dbToCollResourceData(dbrows),
-		Links: &jsonapi.PaginationLinks{
-			Self: s.genCollResourceSelfLink(),
+		Links: &jsonapi.Links{
+			Self: s.GenCollResourceSelfLink(),
 		},
-	}, nil
+	}
 }
 
-func (s *RoleService) dbToCollResourceWithPagination(count int64, dbrows []*dbRole, pagenum, pagesize int64) (*user.RoleCollection, error) {
+func (s *RoleService) dbToCollResourceWithPagination(count int64, dbrows []*dbRole, pagenum, pagesize int64) *user.RoleCollection {
 	rdata := s.dbToCollResourceData(dbrows)
-	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
 	return &user.RoleCollection{
-		Data:  rdata,
-		Links: jsLinks,
-		Meta: &jsonapi.Meta{
-			Pagination: &jsonapi.Pagination{
-				Records: count,
-				Total:   pages,
-				Size:    pagesize,
-				Number:  pagenum,
-			},
+		Data: rdata,
+		Links: &jsonapi.Links{
+			Self: s.GenCollResourceSelfLink(),
 		},
-	}, nil
+	}
 }
 
 func (s *RoleService) dbToCollResourceWithRelAndPagination(count int64, dbrows []*dbRole, pagenum, pagesize int64) (*user.RoleCollection, error) {
 	rdata := s.dbToCollResourceData(dbrows)
 	// related users
-	var users []*user.User
+	var users []*user.UserData
 	for i, _ := range rdata {
 		u, err := s.getUserResourceData(dbrows[i].AuthRoleId)
 		if err != nil {
-			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+			return &user.RoleCollection{}, err
 		}
 		rdata[i].Relationships.Users.Data = s.buildUserResourceIdentifiers(u)
 		users = append(users, u...)
 	}
-	incUsers, err := aphgrpc.ConvertAllToAny(users)
+	incUsers, err := NewUserService(s.Dbh, "users").convertAllToAny(users)
 	if err != nil {
-		return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		return &user.RoleCollection{}, err
 	}
 	// related permissions
-	var perms []*user.Permission
+	var perms []*user.PermissionData
 	for i, _ := range rdata {
 		p, err := s.getPermissionResourceData(dbrows[i].AuthRoleId)
 		if err != nil {
-			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+			return &user.RoleCollection{}, err
 		}
 		rdata[i].Relationships.Permissions.Data = s.buildPermissionResourceIdentifiers(p)
 		perms = append(perms, p...)
 	}
-	incPerms, err := aphgrpc.ConvertAllToAny(perms)
+	incPerms, err := NewPermissionService(s.Dbh, "permissions").convertAllToAny(perms)
 	if err != nil {
-		return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		return &user.RoleCollection{}, err
 	}
 	var allInc []*any.Any
 	allInc = append(allInc, incUsers...)
 	allInc = append(allInc, incPerms...)
-	jsLinks, pages := s.getPagination(count, pagenum, pagesize)
 	return &user.RoleCollection{
-		Data:     rdata,
-		Links:    jsLinks,
-		Included: allInc,
-		Meta: &jsonapi.Meta{
-			Pagination: &jsonapi.Pagination{
-				Records: count,
-				Total:   pages,
-				Size:    pagesize,
-				Number:  pagenum,
-			},
+		Data: rdata,
+		Links: &jsonapi.Links{
+			Self: s.GenCollResourceSelfLink(),
 		},
+		Included: allInc,
 	}, nil
 }
 
@@ -872,7 +869,19 @@ func (s *RoleService) attrTodbRole(attr *user.RoleAttributes) *dbRole {
 	return &dbRole{
 		Role:        attr.Role,
 		Description: attr.Description,
-		CreatedAt:   attr.CreatedAt,
-		UpdatedAt:   attr.UpdatedAt,
+		CreatedAt:   dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.CreatedAt)),
+		UpdatedAt:   dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.UpdatedAt)),
 	}
+}
+
+func (s *RoleService) convertAllToAny(roles []*user.RoleData) ([]*any.Any, error) {
+	aslice := make([]*any.Any, len(roles))
+	for i, r := range roles {
+		pkg, err := ptypes.MarshalAny(r)
+		if err != nil {
+			return aslice, err
+		}
+		aslice[i] = pkg
+	}
+	return aslice, nil
 }
