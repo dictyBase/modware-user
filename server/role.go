@@ -516,26 +516,16 @@ func (s *RoleService) getAllRows() ([]*dbRole, error) {
 	return dbrows, err
 }
 
-func (s *RoleService) getAllRowsWithPaging(pagenum int64, pagesize int64) ([]*dbRole, error) {
-	var dbrows []*dbRole
-	err := s.Dbh.Select("role.*").
-		From(roleDbTblAlias).
-		Paginate(uint64(pagenum), uint64(pagesize)).
-		QueryStructs(dbrows)
-	return dbrows, err
-}
-
-func (s *RoleService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
+func (s *RoleService) getAllSelectedRows() ([]*dbRole, error) {
 	var dbrows []*dbRole
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(roleDbTblAlias).
-		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
 
-func (s *RoleService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
+func (s *RoleService) getAllFilteredRows() ([]*dbRole, error) {
 	var dbrows []*dbRole
 	err := s.Dbh.Select("role.*").
 		From(roleDbTblAlias).
@@ -543,12 +533,11 @@ func (s *RoleService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
 
-func (s *RoleService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbRole, error) {
+func (s *RoleService) getAllSelectedFilteredRows() ([]*dbRole, error) {
 	var dbrows []*dbRole
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
@@ -557,7 +546,6 @@ func (s *RoleService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		Paginate(uint64(pagenum), uint64(pagesize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }

@@ -196,26 +196,16 @@ func (s *PermissionService) getAllRows() ([]*dbPermission, error) {
 	return dbrows, err
 }
 
-func (s *PermissionService) getAllRowsWithPaging(pageNum int64, pageSize int64) ([]*dbPermission, error) {
-	var dbrows []*dbPermission
-	err := s.Dbh.Select("auth_permission").
-		From("auth_permission").
-		Paginate(uint64(pageNum), uint64(pageSize)).
-		QueryStructs(dbrows)
-	return dbrows, err
-}
-
-func (s *PermissionService) getAllSelectedRowsWithPaging(pageNum int64, pageSize int64) ([]*dbPermission, error) {
+func (s *PermissionService) getAllSelectedRowsWith() ([]*dbPermission, error) {
 	var dbrows []*dbPermission
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From("auth_permission").
-		Paginate(uint64(pageNum), uint64(pageSize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
 
-func (s *PermissionService) getAllFilteredRowsWithPaging(pageNum int64, pageSize int64) ([]*dbPermission, error) {
+func (s *PermissionService) getAllFilteredRows() ([]*dbPermission, error) {
 	var dbrows []*dbPermission
 	err := s.Dbh.Select("auth_permission.*").
 		From(permDbTable).
@@ -223,12 +213,11 @@ func (s *PermissionService) getAllFilteredRowsWithPaging(pageNum int64, pageSize
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		Paginate(uint64(pageNum), uint64(pageSize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
 
-func (s *PermissionService) getAllSelectedFilteredRowsWithPaging(pageNum int64, pageSize int64) ([]*dbPermission, error) {
+func (s *PermissionService) getAllSelectedFilteredRows() ([]*dbPermission, error) {
 	var dbrows []*dbPermission
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
@@ -237,7 +226,6 @@ func (s *PermissionService) getAllSelectedFilteredRowsWithPaging(pageNum int64, 
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		Paginate(uint64(pageNum), uint64(pageSize)).
 		QueryStructs(dbrows)
 	return dbrows, err
 }
