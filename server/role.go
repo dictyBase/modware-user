@@ -65,6 +65,7 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 	s.Params = params
 	s.ListMethod = false
+	s.SetBaseURL(ctx)
 	switch {
 	case params.HasFields && params.HasInclude:
 		s.IncludeStr = r.Include
@@ -145,6 +146,7 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.SimpleListReques
 	}
 	s.Params = params
 	s.ListMethod = true
+	s.SetBaseURL(ctx)
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter && params.HasInclude:
@@ -386,6 +388,7 @@ func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest)
 			return &user.Role{}, status.Error(codes.Internal, err.Error())
 		}
 	}
+	s.SetBaseURL(ctx)
 	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
 }
 
@@ -637,6 +640,9 @@ func (s *RoleService) buildResourceData(id int64, attr *user.RoleAttributes) *us
 func (s *RoleService) buildResource(id int64, attr *user.RoleAttributes) *user.Role {
 	return &user.Role{
 		Data: s.buildResourceData(id, attr),
+		Links: &jsonapi.Links{
+			Self: s.GenResourceSelfLink(id),
+		},
 	}
 }
 

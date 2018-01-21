@@ -129,6 +129,7 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 	s.Params = params
 	s.ListMethod = false
+	s.SetBaseURL(ctx)
 	switch {
 	case params.HasFields && params.HasInclude:
 		s.IncludeStr = r.Include
@@ -193,6 +194,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	}
 	s.Params = params
 	s.ListMethod = true
+	s.SetBaseURL(ctx)
 	// has pagination query parameters
 	if aphgrpc.HasPagination(r) {
 		switch {
@@ -482,6 +484,7 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 	if err := s.existsResource(r.Data.Id); err != nil {
 		return &user.User{}, aphgrpc.HandleError(ctx, err)
 	}
+	s.SetBaseURL(ctx)
 	dbcuser := s.attrTodbCoreUser(r.Data.Attributes)
 	usrMap := aphgrpc.GetDefinedTagsWithValue(dbcuser, "db")
 	if len(usrMap) > 0 {
@@ -705,6 +708,9 @@ func (s *UserService) buildResourceData(id int64, uattr *user.UserAttributes) *u
 func (s *UserService) buildResource(id int64, uattr *user.UserAttributes) *user.User {
 	return &user.User{
 		Data: s.buildResourceData(id, uattr),
+		Links: &jsonapi.Links{
+			Self: s.GenResourceSelfLink(id),
+		},
 	}
 }
 

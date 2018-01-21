@@ -68,6 +68,7 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.Simp
 	}
 	s.Params = params
 	s.ListMethod = true
+	s.SetBaseURL(ctx)
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter:
@@ -77,7 +78,7 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.Simp
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbrows, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbrows, err := s.getAllSelectedFilteredRows()
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -143,6 +144,7 @@ func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.Update
 			return &user.Permission{}, status.Error(codes.Internal, err.Error())
 		}
 	}
+	s.SetBaseURL(ctx)
 	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
 }
 
@@ -244,6 +246,9 @@ func (s *PermissionService) buildResourceData(id int64, attr *user.PermissionAtt
 func (s *PermissionService) buildResource(id int64, attr *user.PermissionAttributes) *user.Permission {
 	return &user.Permission{
 		Data: s.buildResourceData(id, attr),
+		Links: &jsonapi.Links{
+			Self: s.GenResourceSelfLink(id),
+		},
 	}
 }
 
