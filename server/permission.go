@@ -60,6 +60,32 @@ func NewPermissionService(dbh *runner.DB, pathPrefix string) *PermissionService 
 	}
 }
 
+func (s *PermissionService) GetPermission(ctx context.Context, r *jsonapi.GetRequest) (*user.Permission, error) {
+	params, md, err := aphgrpc.ValidateAndParseGetParams(s, r)
+	if err != nil {
+		grpc.SetTrailer(ctx, md)
+		return &user.Permission{}, status.Error(codes.InvalidArgument, err.Error())
+	}
+	s.Params = params
+	s.ListMethod = false
+	s.SetBaseURL(ctx)
+	switch {
+	case params.HasFields:
+		s.FieldsStr = r.Fields
+		perm, err := s.getResourceWithSelectedAttr(r.Id)
+		if err != nil {
+			return &user.Permission{}, aphgrpc.HandleError(ctx, err)
+		}
+		return perm, nil
+	default:
+		perm, err := s.getResource(r.Id)
+		if err != nil {
+			return &user.Permission{}, aphgrpc.HandleError(ctx, err)
+		}
+		return perm, nil
+	}
+}
+
 func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.SimpleListRequest) (*user.PermissionCollection, error) {
 	params, md, err := aphgrpc.ValidateAndParseSimpleListParams(s, r)
 	if err != nil {
