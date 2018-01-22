@@ -111,6 +111,7 @@ func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.Relationsh
 	if err != nil {
 		return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 	}
+	s.SetBaseURL(ctx)
 	return &user.UserCollection{
 		Data: udata,
 		Links: &jsonapi.PaginationLinks{
@@ -130,10 +131,7 @@ func (s *RoleService) GetRelatedPermissions(ctx context.Context, r *jsonapi.Rela
 	return &user.PermissionCollection{
 		Data: pdata,
 		Links: &jsonapi.Links{
-			Self: NewPermissionService(
-				s.Dbh,
-				"permissions",
-			).GenCollResourceSelfLink(),
+			Self: s.GenCollResourceRelSelfLink(r.Id, "permissions"),
 		},
 	}, nil
 }

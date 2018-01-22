@@ -178,10 +178,7 @@ func (s *UserService) GetRelatedRoles(ctx context.Context, r *jsonapi.Relationsh
 	return &user.RoleCollection{
 		Data: rdata,
 		Links: &jsonapi.Links{
-			Self: NewRoleService(
-				s.Dbh,
-				"roles",
-			).GenCollResourceSelfLink(),
+			Self: s.GenCollResourceRelSelfLink(r.Id, "roles"),
 		},
 	}, nil
 }
