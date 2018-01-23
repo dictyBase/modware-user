@@ -11,7 +11,7 @@ import (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "run"
+	app.Name = "modware-user"
 	app.Usage = "starts the modware-user microservice with HTTP and grpc backends"
 	app.Version = "1.0.0"
 	app.Flags = []cli.Flag{
@@ -53,8 +53,8 @@ func main() {
 }
 
 func validateArgs(c *cli.Context) error {
-	for _, p := range []string{"chado-pass", "chado-db", "chado-user"} {
-		if !c.IsSet(p) {
+	for _, p := range []string{"dictyuser-pass", "dictyuser-db", "dictyuser-user"} {
+		if len(c.String(p)) == 0 {
 			return cli.NewExitError(
 				fmt.Sprintf("argument %s is missing", p),
 				2,
