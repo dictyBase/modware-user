@@ -447,6 +447,7 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 			return &user.User{}, status.Error(codes.Internal, err.Error())
 		}
 	}
+	s.SetBaseURL(ctx)
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
 	return s.buildResource(userId, r.Data.Attributes), nil
 }

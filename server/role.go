@@ -274,6 +274,7 @@ func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest)
 			return &user.Role{}, status.Error(codes.Internal, err.Error())
 		}
 	}
+	s.SetBaseURL(ctx)
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
 	return s.buildResource(roleId, r.Data.Attributes), nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	dat "gopkg.in/mgutz/dat.v1"
 	runner "gopkg.in/mgutz/dat.v1/sqlx-runner"
@@ -126,6 +127,26 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.Simp
 		}
 		return s.dbToCollResource(dbrows), nil
 	}
+}
+
+func (s *PermissionService) CreatePermission(ctx context.Context, r *user.CreatePermissionRequest) (*user.Permission, error) {
+	var permId int64
+	dbperm := s.attrTodbPermission(r.Data.Attributes)
+	pcolumns := aphgrpc.GetDefinedTags(dbperm, "db")
+	if len(pcolumns) > 0 {
+		err := s.Dbh.InsertInto(permDbTable).
+			Columns(pcolumns...).
+			Record(dbperm).
+			Returning("auth_permission_id").
+			QueryScalar(&permId)
+		if err != nil {
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &user.Permission{}, status.Error(codes.Internal, err.Error())
+		}
+	}
+	s.SetBaseURL(ctx)
+	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
+	return s.buildResource(permId, r.Data.Attributes), nil
 }
 
 func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.UpdatePermissionRequest) (*user.Permission, error) {
