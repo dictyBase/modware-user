@@ -106,19 +106,39 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 }
 
-func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.RelationshipRequest) (*user.UserCollection, error) {
-	udata, err := s.getUserResourceData(r.Id)
+func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.RelationshipRequestWithPagination) (*user.UserCollection, error) {
+	// For pagination based data retreival
+	// 1. Get count of all rows
+	count, err := s.getRelatedUsersCount(r.Id)
+	if err != nil {
+		return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
+	}
+	// 2. Has pagination query paramters
+	var pagenum, pagesize int64
+	if aphgrpc.HasRelatedPagination(r) {
+		pagenum = r.Pagenum
+		pagesize = r.Pagesize
+		// 3. Without any pagination parameters(use default page parameters)
+	} else {
+		pagenum = aphgrpc.DefaultPagenum
+		pagesize = aphgrpc.DefaultPagesize
+	}
+	udata, err := s.getUserResourceDataWithPagination(r.Id, pagenum, pagesize)
 	if err != nil {
 		return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 	}
 	s.SetBaseURL(ctx)
+	pageLinks, pages := s.GetRelatedPagination(r.Id, count, pagenum, pagesize, "users")
 	return &user.UserCollection{
-		Data: udata,
-		Links: &jsonapi.PaginationLinks{
-			Self: NewUserService(
-				s.Dbh,
-				"users",
-			).GenCollResourceSelfLink(),
+		Data:  udata,
+		Links: pageLinks,
+		Meta: &jsonapi.Meta{
+			Pagination: &jsonapi.Pagination{
+				Records: count,
+				Total:   pages,
+				Size:    pagesize,
+				Number:  pagenum,
+			},
 		},
 	}, nil
 }
@@ -516,6 +536,18 @@ func (s *RoleService) getPermissionResourceData(id int64) ([]*user.PermissionDat
 	).dbToCollResourceData(dbrows), nil
 }
 
+func (s *RoleService) getRelatedUsersCount(id int64) (int64, error) {
+	var count int64
+	err := s.Dbh.Select("COUNT(*)").From(`
+		auth_user_role
+		JOIN auth_user user
+		ON auth_user_role.auth_user_id = user.auth_user_id
+		JOIN auth_user_info uinfo
+		ON uinfo.auth_user_id = user.auth_user_id
+		`).Where("auth_user_role.auth_role_id = $1", id).QueryScalar(&count)
+	return count, err
+}
+
 func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 	var dbrows []*dbUser
 	var udata []*user.UserData
@@ -525,7 +557,29 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 		ON auth_user_role.auth_user_id = user.auth_user_id
 		JOIN auth_user_info uinfo
 		ON uinfo.auth_user_id = user.auth_user_id
-	`).Where("auth_user_role.auth_role_id = $1", id).QueryStruct(dbrows)
+	`).Where("auth_user_role.auth_role_id = $1", id).
+		QueryStruct(dbrows)
+	if err != nil {
+		return udata, err
+	}
+	return NewUserService(
+		s.Dbh,
+		s.GetPathPrefix(),
+	).dbToCollResourceData(dbrows), nil
+}
+
+func (s *RoleService) getUserResourceDataWithPagination(id, pagenum, pagesize int64) ([]*user.UserData, error) {
+	var dbrows []*dbUser
+	var udata []*user.UserData
+	err := s.Dbh.Select("user.*", "uinfo.*").From(`
+		auth_user_role
+		JOIN auth_user user
+		ON auth_user_role.auth_user_id = user.auth_user_id
+		JOIN auth_user_info uinfo
+		ON uinfo.auth_user_id = user.auth_user_id
+	`).Where("auth_user_role.auth_role_id = $1", id).
+		Paginate(uint64(pagenum), uint64(pagesize)).
+		QueryStruct(dbrows)
 	if err != nil {
 		return udata, err
 	}
