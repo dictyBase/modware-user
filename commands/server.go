@@ -109,11 +109,11 @@ func RunServer(c *cli.Context) error {
 
 func getPgxDbHandler(c *cli.Context) (*sql.DB, error) {
 	cStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		c.String("chado-user"),
-		c.String("chado-pass"),
-		c.String("chado-host"),
-		c.String("chado-port"),
-		c.String("chado-db"),
+		c.String("dictyuser-user"),
+		c.String("dictyuser-pass"),
+		c.String("dictyuser-host"),
+		c.String("dictyuser-port"),
+		c.String("dictyuser-db"),
 	)
 	return sql.Open("pgx", cStr)
 }
