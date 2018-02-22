@@ -457,20 +457,21 @@ func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	for _, rd := range r.Data {
-		_, err := s.Dbh.Select("aurole.auth_user_role_id").
+		res, err := s.Dbh.Select("aurole.auth_user_role_id").
 			From("auth_user_role aurole").
 			Where("aurole.auth_user_id = $1 AND aurole.auth_role_id = $2", r.Id, rd.Id).
 			Exec()
 		if err != nil {
-			if err == dat.ErrNotFound {
-				_, err := s.Dbh.InsertInto("auth_user_role").
-					Columns("auth_user_id", "auth_role_id").
-					Values(r.Id, rd.Id).Exec()
-				if err != nil {
-					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-					return &empty.Empty{}, status.Error(codes.Internal, err.Error())
-
-				}
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+		}
+		if res.RowsAffected != 1 {
+			_, err := s.Dbh.InsertInto("auth_user_role").
+				Columns("auth_user_id", "auth_role_id").
+				Values(r.Id, rd.Id).Exec()
+			if err != nil {
+				grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+				return &empty.Empty{}, status.Error(codes.Internal, err.Error())
 			}
 		}
 	}

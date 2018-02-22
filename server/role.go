@@ -284,20 +284,22 @@ func (s *RoleService) CreateUserRelationship(ctx context.Context, r *jsonapi.Dat
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	for _, ud := range r.Data {
-		_, err := s.Dbh.Select("aurole.auth_user_role_id").
+		res, err := s.Dbh.Select("aurole.auth_user_role_id").
 			From("auth_user_role aurole").
 			Where("aurole.auth_role_id = $1 AND aurole.auth_user_role_id = $2", r.Id, ud.Id).
 			Exec()
 		if err != nil {
-			if err == dat.ErrNotFound {
-				_, err := s.Dbh.InsertInto("auth_user_role").
-					Columns("auth_role_id", "auth_user_id").
-					Values(r.Id, ud.Id).Exec()
-				if err != nil {
-					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-					return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+		}
+		if res.RowsAffected != 1 {
+			_, err := s.Dbh.InsertInto("auth_user_role").
+				Columns("auth_role_id", "auth_user_id").
+				Values(r.Id, ud.Id).Exec()
+			if err != nil {
+				grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+				return &empty.Empty{}, status.Error(codes.Internal, err.Error())
 
-				}
 			}
 		}
 	}
@@ -310,20 +312,22 @@ func (s *RoleService) CreatePermissionRelationship(ctx context.Context, r *jsona
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
 	}
 	for _, pd := range r.Data {
-		_, err := s.Dbh.Select("auth_role_permission.auth_role_permission_id").
+		res, err := s.Dbh.Select("auth_role_permission.auth_role_permission_id").
 			From("auth_role_permission").
 			Where("auth_role_permission.auth_role_id = $1 AND auth_role_permission.auth_permission_id = $2", r.Id, pd.Id).
 			Exec()
 		if err != nil {
-			if err == dat.ErrNotFound {
-				_, err := s.Dbh.InsertInto("auth_role_permission").
-					Columns("auth_role_id", "auth_permission_id").
-					Values(r.Id, pd.Id).Exec()
-				if err != nil {
-					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-					return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+			return &empty.Empty{}, status.Error(codes.Internal, err.Error())
+		}
+		if res.RowsAffected != 1 {
+			_, err := s.Dbh.InsertInto("auth_role_permission").
+				Columns("auth_role_id", "auth_permission_id").
+				Values(r.Id, pd.Id).Exec()
+			if err != nil {
+				grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+				return &empty.Empty{}, status.Error(codes.Internal, err.Error())
 
-				}
 			}
 		}
 	}
