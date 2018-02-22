@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	dat "gopkg.in/mgutz/dat.v1"
-	runner "gopkg.in/mgutz/dat.v1/sqlx-runner"
+	dat "gopkg.in/mgutz/dat.v2/dat"
+	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
 )
 
 const (
