@@ -91,7 +91,7 @@ func TestPermissionCreate(t *testing.T) {
 	}
 	defer conn.Close()
 	client := pb.NewPermissionServiceClient(conn)
-	nperm, err := client.CreatePermission(context.Background(), NewPermission("edit"))
+	nperm, err := client.CreatePermission(context.Background(), NewPermission("create"))
 	if err != nil {
 		t.Fatalf("could not store the content %s\n", err)
 	}
@@ -101,8 +101,42 @@ func TestPermissionCreate(t *testing.T) {
 	if nperm.Links.Self != nperm.Data.Links.Self {
 		t.Fatalf("top link %s does not match resource link %s", nperm.Links.Self, nperm.Data.Links.Self)
 	}
-	if nperm.Data.Attributes.Permission != "edit" {
+	if nperm.Data.Attributes.Permission != "create" {
 		t.Fatalf("Expected value of attribute permission did not match %s", nperm.Data.Attributes.Permission)
+	}
+}
+
+func TestPermissionUpdate(t *testing.T) {
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+	client := pb.NewPermissionServiceClient(conn)
+	nperm, err := client.CreatePermission(context.Background(), NewPermission("edit"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+	fperm := &pb.UpdatePermissionRequest{
+		Data: &pb.UpdatePermissionRequest_Data{
+			Type: nperm.Data.Type,
+			Id:   nperm.Data.Id,
+			Attributes: &pb.PermissionAttributes{
+				Permission:  "update",
+				Description: fmt.Sprintf("Ability to do %s", "update"),
+			},
+		},
+	}
+	uperm, err := client.UpdatePermission(context.Background(), fperm)
+	if err != nil {
+		t.Fatalf("cannot update permission %s\n", err)
+	}
+	if fperm.Data.Attributes.Permission != uperm.Data.Attributes.Permission {
+		t.Fatalf(
+			"expected permission %s does not match with %s",
+			fperm.Data.Attributes.Permission,
+			uperm.Data.Attributes.Permission,
+		)
 	}
 }
 
@@ -115,7 +149,7 @@ func TestPermissionDelete(t *testing.T) {
 	client := pb.NewPermissionServiceClient(conn)
 	nperm, err := client.CreatePermission(context.Background(), NewPermission("delete"))
 	if err != nil {
-		t.Fatalf("could not store the content %s\n", err)
+		t.Fatalf("could not store the permission %s\n", err)
 	}
 	_, err = client.DeletePermission(context.Background(), &jsonapi.DeleteRequest{Id: nperm.Data.Id})
 	if err != nil {
