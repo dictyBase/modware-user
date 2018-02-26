@@ -93,7 +93,7 @@ func TestPermissionCreate(t *testing.T) {
 	client := pb.NewPermissionServiceClient(conn)
 	nperm, err := client.CreatePermission(context.Background(), NewPermission("create"))
 	if err != nil {
-		t.Fatalf("could not store the content %s\n", err)
+		t.Fatalf("could not store the permission %s\n", err)
 	}
 	if nperm.Data.Id < 1 {
 		t.Fatalf("No id attribute value %d", nperm.Data.Id)
@@ -103,6 +103,26 @@ func TestPermissionCreate(t *testing.T) {
 	}
 	if nperm.Data.Attributes.Permission != "create" {
 		t.Fatalf("Expected value of attribute permission did not match %s", nperm.Data.Attributes.Permission)
+	}
+}
+
+func TestPermissionGet(t *testing.T) {
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+	client := pb.NewPermissionServiceClient(conn)
+	nperm, err := client.CreatePermission(context.Background(), NewPermission("get"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+	eperm, err := client.GetPermission(context.Background(), &jsonapi.GetRequest{Id: nperm.Data.Id})
+	if err != nil {
+		t.Fatalf("could not retrieve permission with id %d", nperm.Data.Id)
+	}
+	if nperm.Data.Id != eperm.Data.Id {
+		t.Fatalf("expected id %d does not match %d\n", nperm.Data.Id, eperm.Data.Id)
 	}
 }
 

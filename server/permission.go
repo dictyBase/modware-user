@@ -205,7 +205,7 @@ func (s *PermissionService) getResourceWithSelectedAttr(id int64) (*user.Permiss
 
 func (s *PermissionService) getResource(id int64) (*user.Permission, error) {
 	dperm := &dbPermission{}
-	err := s.Dbh.Select("perm.*").From("auth_permission").
+	err := s.Dbh.Select("perm.*").From("auth_permission perm").
 		Where("auth_permission_id = $1", id).QueryStruct(dperm)
 	if err != nil {
 		return &user.Permission{}, err
