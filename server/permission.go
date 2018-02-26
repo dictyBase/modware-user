@@ -61,8 +61,12 @@ func NewPermissionService(dbh *runner.DB, pathPrefix string) *PermissionService 
 	}
 }
 
-func (s *PermissionService) GetPermission(ctx context.Context, r *jsonapi.GetRequest) (*user.Permission, error) {
-	params, md, err := aphgrpc.ValidateAndParseGetParams(s, r)
+func (s *PermissionService) GetPermission(ctx context.Context, r *jsonapi.GetRequestWithFields) (*user.Permission, error) {
+	getReq := &jsonapi.GetRequest{
+		Id:     r.Id,
+		Fields: r.Fields,
+	}
+	params, md, err := aphgrpc.ValidateAndParseGetParams(s, getReq)
 	if err != nil {
 		grpc.SetTrailer(ctx, md)
 		return &user.Permission{}, status.Error(codes.InvalidArgument, err.Error())
