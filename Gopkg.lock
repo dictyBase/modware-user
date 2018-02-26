@@ -21,7 +21,7 @@
     "aphdocker",
     "aphgrpc"
   ]
-  revision = "b7c3d71f32bd02448abbc6a4fa6abf720e4a4f03"
+  revision = "a4232b70cf2ce8774f5648e0606b67288dde3823"
 
 [[projects]]
   branch = "master"
