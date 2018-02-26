@@ -130,15 +130,16 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.Simp
 }
 
 func (s *PermissionService) CreatePermission(ctx context.Context, r *user.CreatePermissionRequest) (*user.Permission, error) {
-	var permId int64
 	dbperm := s.attrTodbPermission(r.Data.Attributes)
 	pcolumns := aphgrpc.GetDefinedTags(dbperm, "db")
+	allcolumns := append(permissionCols, "auth_permission_id")
+	newdbPerm := &dbPermission{}
 	if len(pcolumns) > 0 {
 		err := s.Dbh.InsertInto(permDbTable).
 			Columns(pcolumns...).
 			Record(dbperm).
-			Returning("auth_permission_id").
-			QueryScalar(&permId)
+			Returning(allcolumns...).
+			QueryStruct(newdbPerm)
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
 			return &user.Permission{}, status.Error(codes.Internal, err.Error())
@@ -146,7 +147,10 @@ func (s *PermissionService) CreatePermission(ctx context.Context, r *user.Create
 	}
 	s.SetBaseURL(ctx)
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
-	return s.buildResource(permId, r.Data.Attributes), nil
+	return s.buildResource(
+		aphgrpc.NullToInt64(newdbPerm.AuthPermissionId),
+		s.dbToResourceAttributes(newdbPerm),
+	), nil
 }
 
 func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.UpdatePermissionRequest) (*user.Permission, error) {
