@@ -21,7 +21,7 @@
     "aphdocker",
     "aphgrpc"
   ]
-  revision = "a4232b70cf2ce8774f5648e0606b67288dde3823"
+  revision = "d98046b830144bb91c0a0478c3320f626da6b0f5"
 
 [[projects]]
   branch = "master"
@@ -30,7 +30,7 @@
     "dictybaseapis/api/jsonapi",
     "dictybaseapis/user"
   ]
-  revision = "206275a5c0e3b222e8dffa593554d19f17cebe26"
+  revision = "de6b351be5e1db52565b90fb2e49b46c84195760"
 
 [[projects]]
   name = "github.com/docker/distribution"

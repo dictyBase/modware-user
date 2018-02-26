@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/dictyBase/apihelpers/aphdocker"
@@ -117,12 +118,25 @@ func TestPermissionGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
-	eperm, err := client.GetPermission(context.Background(), &jsonapi.GetRequest{Id: nperm.Data.Id})
+	eperm, err := client.GetPermission(context.Background(), &jsonapi.GetRequestWithFields{Id: nperm.Data.Id})
 	if err != nil {
 		t.Fatalf("could not retrieve permission with id %d", nperm.Data.Id)
 	}
 	if nperm.Data.Id != eperm.Data.Id {
 		t.Fatalf("expected id %d does not match %d\n", nperm.Data.Id, eperm.Data.Id)
+	}
+	efperm, err := client.GetPermission(
+		context.Background(),
+		&jsonapi.GetRequestWithFields{Id: nperm.Data.Id, Fields: "permission"},
+	)
+	if err != nil {
+		t.Fatalf("could not retrieve permission with id %d", nperm.Data.Id)
+	}
+	if len(efperm.Data.Attributes.Description) != 0 {
+		t.Fatalf("expecting nil but retrieved %s\n", efperm.Data.Attributes.Description)
+	}
+	if m, _ := regexp.MatchString("fields=permission", efperm.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain fields query parameter", efperm.Links.Self)
 	}
 }
 
