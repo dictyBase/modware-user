@@ -221,7 +221,7 @@ func (s *PermissionService) getAllRows() ([]*dbPermission, error) {
 	var dbrows []*dbPermission
 	err := s.Dbh.Select("auth_permission.*").
 		From(permDbTable).
-		QueryStructs(dbrows)
+		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
@@ -230,7 +230,7 @@ func (s *PermissionService) getAllSelectedRows() ([]*dbPermission, error) {
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From("auth_permission").
-		QueryStructs(dbrows)
+		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
@@ -242,7 +242,7 @@ func (s *PermissionService) getAllFilteredRows() ([]*dbPermission, error) {
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		QueryStructs(dbrows)
+		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
@@ -255,7 +255,7 @@ func (s *PermissionService) getAllSelectedFilteredRows() ([]*dbPermission, error
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		QueryStructs(dbrows)
+		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
