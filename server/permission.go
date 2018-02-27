@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
@@ -19,6 +20,7 @@ import (
 
 const (
 	permDbTable = "auth_permission"
+	permDbAlias = "auth_permission perm"
 )
 
 var permissionCols = []string{
@@ -47,14 +49,14 @@ func NewPermissionService(dbh *runner.DB, pathPrefix string) *PermissionService 
 			Dbh:        dbh,
 			PathPrefix: pathPrefix,
 			FilToColumns: map[string]string{
-				"permission":  "perm.permission",
-				"description": "perm.description",
+				"permission":  fmt.Sprintf("%s.permission", permDbTable),
+				"description": fmt.Sprintf("%s.description", permDbTable),
 			},
 			FieldsToColumns: map[string]string{
-				"permission":  "perm.permission",
-				"description": "perm.description",
-				"created_at":  "perm.created_at",
-				"updated_at":  "perm.updated_at",
+				"permission":  fmt.Sprintf("%s.permission", permDbTable),
+				"description": fmt.Sprintf("%s.description", permDbTable),
+				"created_at":  fmt.Sprintf("%s.created_at", permDbTable),
+				"updated_at":  fmt.Sprintf("%s.updated_at", permDbTable),
 			},
 			ReqAttrs: []string{"Permission"},
 		},
@@ -209,7 +211,7 @@ func (s *PermissionService) getResourceWithSelectedAttr(id int64) (*user.Permiss
 
 func (s *PermissionService) getResource(id int64) (*user.Permission, error) {
 	dperm := &dbPermission{}
-	err := s.Dbh.Select("perm.*").From("auth_permission perm").
+	err := s.Dbh.Select(fmt.Sprintf("%s.*", permDbTable)).From(permDbTable).
 		Where("auth_permission_id = $1", id).QueryStruct(dperm)
 	if err != nil {
 		return &user.Permission{}, err
@@ -219,7 +221,7 @@ func (s *PermissionService) getResource(id int64) (*user.Permission, error) {
 
 func (s *PermissionService) getAllRows() ([]*dbPermission, error) {
 	var dbrows []*dbPermission
-	err := s.Dbh.Select("auth_permission.*").
+	err := s.Dbh.Select(fmt.Sprintf("%s.*", permDbTable)).
 		From(permDbTable).
 		QueryStructs(&dbrows)
 	return dbrows, err
@@ -229,14 +231,14 @@ func (s *PermissionService) getAllSelectedRows() ([]*dbPermission, error) {
 	var dbrows []*dbPermission
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
-		From("auth_permission").
+		From(permDbTable).
 		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
 func (s *PermissionService) getAllFilteredRows() ([]*dbPermission, error) {
 	var dbrows []*dbPermission
-	err := s.Dbh.Select("auth_permission.*").
+	err := s.Dbh.Select(fmt.Sprintf("%s.*", permDbTable)).
 		From(permDbTable).
 		Scope(
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
@@ -250,7 +252,7 @@ func (s *PermissionService) getAllSelectedFilteredRows() ([]*dbPermission, error
 	var dbrows []*dbPermission
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
-		From("auth_permission").
+		From(permDbTable).
 		Scope(
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
