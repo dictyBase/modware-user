@@ -149,6 +149,46 @@ func TestPermissionGet(t *testing.T) {
 	}
 }
 
+func TestPermissionGetAllWithFields(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+	client := pb.NewPermissionServiceClient(conn)
+	for _, pt := range []string{"get", "create", "edit", "delete", "admin"} {
+		_, err := client.CreatePermission(
+			context.Background(),
+			NewPermission(pt),
+		)
+		if err != nil {
+			t.Fatalf("could not store the permission %s\n", err)
+		}
+	}
+	fperms, err := client.ListPermissions(
+		context.Background(),
+		&jsonapi.SimpleListRequest{Fields: "permission"},
+	)
+	if err != nil {
+		t.Fatalf("could not fetch all permissions with fields %s\n", err)
+	}
+	if len(fperms.Data) != 5 {
+		t.Fatalf("expected entries does not match %d\n", len(fperms.Data))
+	}
+	if m, _ := regexp.MatchString("fields=permission", fperms.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain fields query parameter", fperms.Links.Self)
+	}
+	for _, perm := range fperms.Data {
+		if len(perm.Attributes.Description) != 0 {
+			t.Fatalf("expecting nil but retrieved %s\n", perm.Attributes.Description)
+		}
+		if perm.Links.Self != fmt.Sprintf("/permissions/%d", perm.Id) {
+			t.Fatalf("expected link does not match %s\n", perm.Links.Self)
+		}
+	}
+}
+
 func TestPermissionGetAll(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
