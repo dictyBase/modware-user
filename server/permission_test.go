@@ -73,6 +73,13 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func tearDownTest(t *testing.T) {
+	_, err := db.Exec("TRUNCATE auth_permission,auth_role,auth_role_permission,auth_user,auth_user_info,auth_user_role")
+	if err != nil {
+		t.Fatalf("unable to truncate tables %s\n", err)
+	}
+}
+
 func NewPermission(perm string) *pb.CreatePermissionRequest {
 	return &pb.CreatePermissionRequest{
 		Data: &pb.CreatePermissionRequest_Data{
@@ -86,6 +93,7 @@ func NewPermission(perm string) *pb.CreatePermissionRequest {
 }
 
 func TestPermissionCreate(t *testing.T) {
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -108,6 +116,7 @@ func TestPermissionCreate(t *testing.T) {
 }
 
 func TestPermissionGet(t *testing.T) {
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -140,7 +149,42 @@ func TestPermissionGet(t *testing.T) {
 	}
 }
 
+func TestPermissionGetAll(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+	client := pb.NewPermissionServiceClient(conn)
+	for _, pt := range []string{"get", "create", "edit", "delete", "admin"} {
+		_, err := client.CreatePermission(
+			context.Background(),
+			NewPermission(pt),
+		)
+		if err != nil {
+			t.Fatalf("could not store the permission %s\n", err)
+		}
+	}
+	lperms, err := client.ListPermissions(context.Background(), &jsonapi.SimpleListRequest{})
+	if err != nil {
+		t.Fatalf("could not fetch all permissions %s\n", err)
+	}
+	if len(lperms.Data) != 5 {
+		t.Fatalf("expected entries does not match %d\n", len(lperms.Data))
+	}
+	for _, perm := range lperms.Data {
+		if perm.Id < 1 {
+			t.Fatalf("expected id does not match %d\n", perm.Id)
+		}
+		if perm.Links.Self != fmt.Sprintf("/permissions/%d", perm.Id) {
+			t.Fatalf("expected link does not match %s\n", perm.Links.Self)
+		}
+	}
+}
+
 func TestPermissionUpdate(t *testing.T) {
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -175,6 +219,7 @@ func TestPermissionUpdate(t *testing.T) {
 }
 
 func TestPermissionDelete(t *testing.T) {
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
