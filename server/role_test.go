@@ -69,5 +69,10 @@ func TestRoleCreateWithPermission(t *testing.T) {
 	if nrole.Data.Attributes.Role != "creator" {
 		t.Fatalf("Expected value of attribute permission did not match %s", nrole.Data.Attributes.Role)
 	}
-	t.Logf("%+v", nrole.Data.Relationships)
+	if nrole.Data.Relationships.Permissions.Links.Self != fmt.Sprintf("/roles/%d/relationships/permissions", perm.Data.Id) {
+		t.Fatalf("permission's self relationship %s does not match", nrole.Data.Relationships.Permissions.Links.Self)
+	}
+	if nrole.Data.Relationships.Permissions.Links.Related != fmt.Sprintf("/roles/%d/permissions", perm.Data.Id) {
+		t.Fatalf("permission's self relationship %s does not match", nrole.Data.Relationships.Permissions.Links.Related)
+	}
 }
