@@ -217,8 +217,8 @@ func (s *PermissionService) getResourceWithSelectedAttr(id int64) (*user.Permiss
 	dperm := &dbPermission{}
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
-		From("auth_permission perm").
-		Where("perm.auth_permission_id = $1", id).QueryStruct(dperm)
+		From(permDbTable).
+		Where("auth_permission_id = $1", id).QueryStruct(dperm)
 	if err != nil {
 		return &user.Permission{}, err
 	}
