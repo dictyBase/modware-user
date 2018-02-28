@@ -41,6 +41,27 @@ func NewRoleWithPermission(role string, perm *pb.Permission) *pb.CreateRoleReque
 	}
 }
 
+func NewUpdateRoleWithPermission(newRole string, existingRole *pb.Role, perm *pb.Permission) *pb.UpdateRoleRequest {
+	return &pb.UpdateRoleRequest{
+		Id: existingRole.Data.Id,
+		Data: &pb.UpdateRoleRequest_Data{
+			Id:   existingRole.Data.Id,
+			Type: existingRole.Data.Type,
+			Attributes: &pb.RoleAttributes{
+				Role:        newRole,
+				Description: fmt.Sprintf("Ability to do %s", newRole),
+			},
+			Relationships: &pb.ExistingRoleRelationships{
+				Permissions: &pb.ExistingRoleRelationships_Permissions{
+					Data: []*jsonapi.Data{
+						&jsonapi.Data{Id: perm.Data.Id, Type: perm.Data.Type},
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestRoleCreateWithPermission(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
@@ -74,5 +95,41 @@ func TestRoleCreateWithPermission(t *testing.T) {
 	}
 	if nrole.Data.Relationships.Permissions.Links.Related != fmt.Sprintf("/roles/%d/permissions", perm.Data.Id) {
 		t.Fatalf("permission's self relationship %s does not match", nrole.Data.Relationships.Permissions.Links.Related)
+	}
+}
+
+func TestRoleUpdateWithPermission(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	permClient := pb.NewPermissionServiceClient(conn)
+	cperm, err := permClient.CreatePermission(context.Background(), NewPermission("create"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+	dperm, err := permClient.CreatePermission(context.Background(), NewPermission("destroy"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRoleWithPermission("creator", cperm))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	// Now update the role
+	urole, err := client.UpdateRole(
+		context.Background(),
+		NewUpdateRoleWithPermission("destroyer", nrole, dperm),
+	)
+	if err != nil {
+		t.Fatalf("could not update the role %s\n", err)
+	}
+	if urole.Data.Attributes.Role != "destroyer" {
+		t.Fatalf("expected role does not match %s\n", urole.Data.Attributes.Role)
 	}
 }
