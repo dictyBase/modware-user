@@ -3,10 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 )
 
@@ -175,5 +177,83 @@ func TestRoleGet(t *testing.T) {
 	}
 	if grole.Data.Attributes.Role != "fetcher" {
 		t.Fatalf("expected role %s does not match %s\n", grole.Data.Attributes.Role, "fetcher")
+	}
+}
+
+func TestRoleGetWithFields(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRole("fetcher"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	grole, err := client.GetRole(
+		context.Background(),
+		&jsonapi.GetRequest{Id: nrole.Data.Id, Fields: "role"},
+	)
+	if err != nil {
+		t.Fatalf("could not delete the role %s\n", err)
+	}
+	if len(grole.Data.Attributes.Description) != 0 {
+		t.Fatalf("expecting nil but retrieved %s\n", grole.Data.Attributes.Description)
+	}
+	if m, _ := regexp.MatchString("fields=role", grole.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain fields query parameter", grole.Links.Self)
+	}
+}
+
+func TestRoleGetWithFieldsAndInclude(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	permClient := pb.NewPermissionServiceClient(conn)
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRoleWithPermission("fetcher", perm))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	grole, err := client.GetRole(
+		context.Background(),
+		&jsonapi.GetRequest{Id: nrole.Data.Id, Fields: "role", Include: "permissions"},
+	)
+	if err != nil {
+		t.Fatalf("could not fetch the role %s\n", err)
+	}
+	if len(grole.Data.Attributes.Description) != 0 {
+		t.Fatalf("expecting nil but retrieved %s\n", grole.Data.Attributes.Description)
+	}
+	if m, _ := regexp.MatchString("fields=role&include=permissions", grole.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain fields query parameter", grole.Links.Self)
+	}
+	for _, a := range grole.Included {
+		permData := &pb.PermissionData{}
+		if err := ptypes.UnmarshalAny(a, permData); err != nil {
+			t.Fatalf("error in unmarshaling any types %s\n", err)
+		} else {
+			if permData.Id != perm.Data.Id {
+				t.Fatalf("expected id does not match with %s\n", permData.Id)
+			}
+			if permData.Links.Self != perm.Links.Self {
+				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)
+			}
+			if permData.Attributes.Permission != perm.Data.Attributes.Permission {
+				t.Fatalf("expected permission does not match with %s\n", permData.Attributes.Permission)
+			}
+		}
 	}
 }
