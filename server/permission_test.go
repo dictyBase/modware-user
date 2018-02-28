@@ -312,6 +312,7 @@ func TestPermissionUpdate(t *testing.T) {
 				Description: fmt.Sprintf("Ability to do %s", "update"),
 			},
 		},
+		Id: nperm.Data.Id,
 	}
 	uperm, err := client.UpdatePermission(context.Background(), fperm)
 	if err != nil {
