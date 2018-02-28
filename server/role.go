@@ -25,6 +25,8 @@ const (
 	roleDbTblAlias = "auth_role role"
 )
 
+var roleCols = []string{"auth_role_id", "role", "created_at", "updated_at"}
+
 type dbRole struct {
 	AuthRoleId  int64        `db:"auth_role_id"`
 	Role        string       `db:"role"`
@@ -245,19 +247,20 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.SimpleListReques
 }
 
 func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest) (*user.Role, error) {
-	var roleId int64
 	dbrole := s.attrTodbRole(r.Data.Attributes)
 	rcolumns := aphgrpc.GetDefinedTags(dbrole, "db")
 	if len(rcolumns) > 0 {
 		err := s.Dbh.InsertInto("auth_role").
 			Columns(rcolumns...).
 			Record(dbrole).
-			Returning("auth_role_id").QueryScalar(&roleId)
+			Returning(roleCols...).
+			QueryStruct(dbrole)
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
 			return &user.Role{}, status.Error(codes.Internal, err.Error())
 		}
 	}
+	roleId := dbrole.AuthRoleId
 	rstruct := structs.New(r).Field("Data").Field("Relationships")
 	if !rstruct.IsZero() {
 		if !rstruct.Field("Users").IsZero() {
@@ -285,7 +288,7 @@ func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest)
 	}
 	s.SetBaseURL(ctx)
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
-	return s.buildResource(roleId, r.Data.Attributes), nil
+	return s.buildResource(roleId, s.dbToResourceAttributes(dbrole)), nil
 }
 
 func (s *RoleService) CreateUserRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
@@ -366,8 +369,9 @@ func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest)
 	dbrole := s.attrTodbRole(r.Data.Attributes)
 	rmap := aphgrpc.GetDefinedTagsWithValue(dbrole, "db")
 	if len(rmap) > 0 {
-		_, err := s.Dbh.Update(roleDbTable).SetMap(rmap).
-			Where("auth_role_id = $1", r.Data.Id).Exec()
+		err := s.Dbh.Update(roleDbTable).SetMap(rmap).
+			Where("auth_role_id = $1", r.Data.Id).Returning(roleCols...).
+			QueryStruct(dbrole)
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
 			return &user.Role{}, status.Error(codes.Internal, err.Error())
@@ -399,7 +403,7 @@ func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest)
 		}
 	}
 	s.SetBaseURL(ctx)
-	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
+	return s.buildResource(dbrole.AuthRoleId, s.dbToResourceAttributes(dbrole)), nil
 }
 
 func (s *RoleService) UpdateUserRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
