@@ -152,3 +152,28 @@ func TestRoleDelete(t *testing.T) {
 		t.Fatalf("could not delete the role %s\n", err)
 	}
 }
+
+func TestRoleGet(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRole("fetcher"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	grole, err := client.GetRole(context.Background(), &jsonapi.GetRequest{Id: nrole.Data.Id})
+	if err != nil {
+		t.Fatalf("could not delete the role %s\n", err)
+	}
+	if grole.Data.Id != nrole.Data.Id {
+		t.Fatalf("expected id %d does not match %d\n", nrole.Data.Id, grole.Data.Id)
+	}
+	if grole.Data.Attributes.Role != "fetcher" {
+		t.Fatalf("expected role %s does not match %s\n", grole.Data.Attributes.Role, "fetcher")
+	}
+}
