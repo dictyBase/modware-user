@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
@@ -453,8 +454,13 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 }
 
 func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
-	if err := s.existsResource(r.Id); err != nil {
+	result, err := s.existsResource(r.Id)
+	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
+	}
+	if !result {
+		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
+		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	for _, rd := range r.Data {
 		res, err := s.Dbh.Select("aurole.auth_user_role_id").
@@ -480,8 +486,13 @@ func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest) (*user.User, error) {
-	if err := s.existsResource(r.Data.Id); err != nil {
+	result, err := s.existsResource(r.Id)
+	if err != nil {
 		return &user.User{}, aphgrpc.HandleError(ctx, err)
+	}
+	if !result {
+		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
+		return &user.User{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	s.SetBaseURL(ctx)
 	dbcuser := s.attrTodbCoreUser(r.Data.Attributes)
@@ -517,8 +528,13 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 }
 
 func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
-	if err := s.existsResource(r.Id); err != nil {
+	result, err := s.existsResource(r.Id)
+	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
+	}
+	if !result {
+		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
+		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	_, err := s.Dbh.DeleteFrom("auth_user_role").
 		Where("auth_user_role.auth_user_id = $1", r.Id).
@@ -540,8 +556,13 @@ func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
-	if err := s.existsResource(r.Id); err != nil {
+	result, err := s.existsResource(r.Id)
+	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
+	}
+	if !result {
+		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
+		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	_, err := s.Dbh.DeleteFrom(userDbTable).Where("user.auth_user_id = $1", r.Id).Exec()
 	if err != nil {
@@ -552,8 +573,13 @@ func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) 
 }
 
 func (s *UserService) DeleteRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
-	if err := s.existsResource(r.Id); err != nil {
+	result, err := s.existsResource(r.Id)
+	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
+	}
+	if !result {
+		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
+		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	for _, rd := range r.Data {
 		_, err := s.Dbh.DeleteFrom("auth_user_role").
@@ -569,10 +595,16 @@ func (s *UserService) DeleteRoleRelationship(ctx context.Context, r *jsonapi.Dat
 
 // All helper functions
 
-func (s *UserService) existsResource(id int64) error {
-	_, err := s.Dbh.Select("user.auth_user_id").From(userDbTable).
+func (s *UserService) existsResource(id int64) (bool, error) {
+	r, err := s.Dbh.Select("user.auth_user_id").From(userDbTable).
 		Where("user.auth_user_id = $1", id).Exec()
-	return err
+	if err != nil {
+		return false, err
+	}
+	if r.RowsAffected != 1 {
+		return false, nil
+	}
+	return true, nil
 }
 
 // -- Functions that queries the storage and generates an user resource object

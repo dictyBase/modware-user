@@ -160,8 +160,13 @@ func (s *PermissionService) CreatePermission(ctx context.Context, r *user.Create
 }
 
 func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.UpdatePermissionRequest) (*user.Permission, error) {
-	if err := s.existsResource(r.Data.Id); err != nil {
-		return &user.Permission{}, aphgrpc.HandleError(ctx, err)
+	result, err := s.existsResource(r.Id)
+	if err != nil {
+		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
+	}
+	if !result {
+		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
+		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	dbperm := s.attrTodbPermission(r.Data.Attributes)
 	permMap := aphgrpc.GetDefinedTagsWithValue(dbperm, "db")
@@ -178,8 +183,13 @@ func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.Update
 }
 
 func (s *PermissionService) DeletePermission(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
-	if err := s.existsResource(r.Id); err != nil {
+	result, err := s.existsResource(r.Id)
+	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
+	}
+	if !result {
+		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
+		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	_, err := s.Dbh.DeleteFrom("auth_permission").Where("auth_permission_id = $1", r.Id).Exec()
 	if err != nil {
@@ -191,10 +201,16 @@ func (s *PermissionService) DeletePermission(ctx context.Context, r *jsonapi.Del
 
 // All helper functions
 
-func (s *PermissionService) existsResource(id int64) error {
-	_, err := s.Dbh.Select("auth_permission_id").From("auth_permission").
+func (s *PermissionService) existsResource(id int64) (bool, error) {
+	r, err := s.Dbh.Select("auth_permission_id").From("auth_permission").
 		Where("auth_permission_id = $1", id).Exec()
-	return err
+	if err != nil {
+		return false, err
+	}
+	if r.RowsAffected != 1 {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (s *PermissionService) getResourceWithSelectedAttr(id int64) (*user.Permission, error) {
