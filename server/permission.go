@@ -162,11 +162,11 @@ func (s *PermissionService) CreatePermission(ctx context.Context, r *user.Create
 func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.UpdatePermissionRequest) (*user.Permission, error) {
 	result, err := s.existsResource(r.Id)
 	if err != nil {
-		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
+		return &user.Permission{}, aphgrpc.HandleError(ctx, err)
 	}
 	if !result {
 		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
-		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
+		return &user.Permission{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	dbperm := s.attrTodbPermission(r.Data.Attributes)
 	permMap := aphgrpc.GetDefinedTagsWithValue(dbperm, "db")
@@ -191,7 +191,7 @@ func (s *PermissionService) DeletePermission(ctx context.Context, r *jsonapi.Del
 		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
 		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
-	_, err := s.Dbh.DeleteFrom("auth_permission").Where("auth_permission_id = $1", r.Id).Exec()
+	_, err = s.Dbh.DeleteFrom("auth_permission").Where("auth_permission_id = $1", r.Id).Exec()
 	if err != nil {
 		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())

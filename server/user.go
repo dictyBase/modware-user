@@ -536,7 +536,7 @@ func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
 		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
-	_, err := s.Dbh.DeleteFrom("auth_user_role").
+	_, err = s.Dbh.DeleteFrom("auth_user_role").
 		Where("auth_user_role.auth_user_id = $1", r.Id).
 		Exec()
 	if err != nil {
@@ -564,7 +564,7 @@ func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) 
 		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
 		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
-	_, err := s.Dbh.DeleteFrom(userDbTable).Where("user.auth_user_id = $1", r.Id).Exec()
+	_, err = s.Dbh.DeleteFrom(userDbTable).Where("user.auth_user_id = $1", r.Id).Exec()
 	if err != nil {
 		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())

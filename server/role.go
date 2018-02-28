@@ -411,7 +411,7 @@ func (s *RoleService) UpdateUserRelationship(ctx context.Context, r *jsonapi.Dat
 		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
 		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
-	_, err := s.Dbh.DeleteFrom("auth_user_role").
+	_, err = s.Dbh.DeleteFrom("auth_user_role").
 		Where("auth_user_role.auth_role_id = $1", r.Id).
 		Exec()
 	if err != nil {
@@ -439,7 +439,7 @@ func (s *RoleService) UpdatePermissionRelationship(ctx context.Context, r *jsona
 		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
 		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
-	_, err := s.Dbh.DeleteFrom("auth_role_permission").
+	_, err = s.Dbh.DeleteFrom("auth_role_permission").
 		Where("auth_role_permission.auth_role_id = $1", r.Id).
 		Exec()
 	if err != nil {
@@ -467,7 +467,7 @@ func (s *RoleService) DeleteRole(ctx context.Context, r *jsonapi.DeleteRequest) 
 		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
 		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
-	_, err := s.Dbh.DeleteFrom(roleDbTable).Where("auth_role_id = $1", r.Id).Exec()
+	_, err = s.Dbh.DeleteFrom(roleDbTable).Where("auth_role_id = $1", r.Id).Exec()
 	if err != nil {
 		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseDelete)
 		return &empty.Empty{}, status.Error(codes.Internal, err.Error())
@@ -497,8 +497,13 @@ func (s *RoleService) DeleteUserRelationship(ctx context.Context, r *jsonapi.Dat
 }
 
 func (s *RoleService) DeletePermissionRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
-	if err := s.existsResource(r.Id); err != nil {
+	result, err := s.existsResource(r.Id)
+	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
+	}
+	if !result {
+		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
+		return &empty.Empty{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
 	for _, pd := range r.Data {
 		_, err := s.Dbh.DeleteFrom("auth_role_permission").
