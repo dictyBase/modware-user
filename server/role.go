@@ -603,16 +603,15 @@ func (s *RoleService) getPermissionResourceData(id int64) ([]*user.PermissionDat
 	var pdata []*user.PermissionData
 	err := s.Dbh.Select("perm.*").From(`
 			auth_role_permission
-			JOIN permission perm
-			ON auth_role_permission.auth_permission_id = perm.permission_id
-		`).Where("auth_role_permission.auth_role_id = $1", id).
-		QueryStruct(&dbrows)
+			JOIN auth_permission perm
+			ON auth_role_permission.auth_permission_id = perm.auth_permission_id
+		`).Where("auth_role_permission.auth_role_id = $1", id).QueryStructs(&dbrows)
 	if err != nil {
 		return pdata, err
 	}
 	return NewPermissionService(
 		s.Dbh,
-		s.GetPathPrefix(),
+		"permissions",
 	).dbToCollResourceData(dbrows), nil
 }
 
@@ -638,13 +637,13 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 		JOIN auth_user_info uinfo
 		ON uinfo.auth_user_id = user.auth_user_id
 	`).Where("auth_user_role.auth_role_id = $1", id).
-		QueryStruct(&dbrows)
+		QueryStructs(&dbrows)
 	if err != nil {
 		return udata, err
 	}
 	return NewUserService(
 		s.Dbh,
-		s.GetPathPrefix(),
+		"users",
 	).dbToCollResourceData(dbrows), nil
 }
 
@@ -659,13 +658,13 @@ func (s *RoleService) getUserResourceDataWithPagination(id, pagenum, pagesize in
 		ON uinfo.auth_user_id = user.auth_user_id
 	`).Where("auth_user_role.auth_role_id = $1", id).
 		Paginate(uint64(pagenum), uint64(pagesize)).
-		QueryStruct(&dbrows)
+		QueryStructs(&dbrows)
 	if err != nil {
 		return udata, err
 	}
 	return NewUserService(
 		s.Dbh,
-		s.GetPathPrefix(),
+		"users",
 	).dbToCollResourceData(dbrows), nil
 }
 
