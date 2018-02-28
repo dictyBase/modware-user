@@ -11,6 +11,7 @@ import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/fatih/structs"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -256,22 +257,29 @@ func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest)
 			return &user.Role{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	for _, u := range r.Data.Relationships.Users.Data {
-		_, err := s.Dbh.InsertInto("auth_user_role").
-			Columns("auth_user_id", "auth_role_id").
-			Values(u.Id, roleId).Exec()
-		if err != nil {
-			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-			return &user.Role{}, status.Error(codes.Internal, err.Error())
+	rstruct := structs.New(r).Field("Data").Field("Relationships")
+	if !rstruct.IsZero() {
+		if !rstruct.Field("Users").IsZero() {
+			for _, u := range r.Data.Relationships.Users.Data {
+				_, err := s.Dbh.InsertInto("auth_user_role").
+					Columns("auth_user_id", "auth_role_id").
+					Values(u.Id, roleId).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+					return &user.Role{}, status.Error(codes.Internal, err.Error())
+				}
+			}
 		}
-	}
-	for _, p := range r.Data.Relationships.Permissions.Data {
-		_, err := s.Dbh.InsertInto("auth_role_permission").
-			Columns("auth_role_id", "auth_permission_id").
-			Values(roleId, p.Id).Exec()
-		if err != nil {
-			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-			return &user.Role{}, status.Error(codes.Internal, err.Error())
+		if !rstruct.Field("Permissions").IsZero() {
+			for _, p := range r.Data.Relationships.Permissions.Data {
+				_, err := s.Dbh.InsertInto("auth_role_permission").
+					Columns("auth_role_id", "auth_permission_id").
+					Values(roleId, p.Id).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+					return &user.Role{}, status.Error(codes.Internal, err.Error())
+				}
+			}
 		}
 	}
 	s.SetBaseURL(ctx)
