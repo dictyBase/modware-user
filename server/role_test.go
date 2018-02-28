@@ -133,3 +133,22 @@ func TestRoleUpdateWithPermission(t *testing.T) {
 		t.Fatalf("expected role does not match %s\n", urole.Data.Attributes.Role)
 	}
 }
+
+func TestRoleDelete(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRole("deleter"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	_, err = client.DeleteRole(context.Background(), &jsonapi.DeleteRequest{Id: nrole.Data.Id})
+	if err != nil {
+		t.Fatalf("could not delete the role %s\n", err)
+	}
+}
