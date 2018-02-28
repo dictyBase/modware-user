@@ -357,13 +357,29 @@ func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest)
 			return &user.Role{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	for _, u := range r.Data.Relationships.Users.Data {
-		_, err := s.Dbh.Update("auth_user_role").
-			Set("auth_user_id", u.Id).
-			Where("auth_role_id = $1", r.Data.Id).Exec()
-		if err != nil {
-			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
-			return &user.Role{}, status.Error(codes.Internal, err.Error())
+	rstruct := structs.New(r).Field("Data").Field("Relationships")
+	if !rstruct.IsZero() {
+		if !rstruct.Field("Users").IsZero() {
+			for _, u := range r.Data.Relationships.Users.Data {
+				_, err := s.Dbh.Update("auth_user_role").
+					Set("auth_user_id", u.Id).
+					Where("auth_role_id = $1", r.Data.Id).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+					return &user.Role{}, status.Error(codes.Internal, err.Error())
+				}
+			}
+		}
+		if !rstruct.Field("Permissions").IsZero() {
+			for _, p := range r.Data.Relationships.Permissions.Data {
+				_, err := s.Dbh.Update("auth_role_permission").
+					Set("auth_permission_id", p.Id).
+					Where("auth_role_id = $1", r.Data.Id).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+					return &user.Role{}, status.Error(codes.Internal, err.Error())
+				}
+			}
 		}
 	}
 	s.SetBaseURL(ctx)

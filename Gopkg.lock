@@ -21,7 +21,7 @@
     "aphdocker",
     "aphgrpc"
   ]
-  revision = "f6ba75802483a545aa2ae6d6d22f70a195f0be63"
+  revision = "c70099dbfba917ca3a2e60e5c101e0dd488407d9"
 
 [[projects]]
   branch = "master"
@@ -472,6 +472,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "486760fe2ddba2a86f74eea3364fca44274b018d4ebc7b3ab1eaa4d81227aa7d"
+  inputs-digest = "bd430da7dbf42d91aa14619700fc7079250fbb69ac7e3bf001cf383730164904"
   solver-name = "gps-cdcl"
   solver-version = 1
