@@ -506,7 +506,7 @@ func (s *RoleService) getAllFilteredRows() ([]*dbRole, error) {
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		QueryStructs(dbrows)
+		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
@@ -519,7 +519,7 @@ func (s *RoleService) getAllSelectedFilteredRows() ([]*dbRole, error) {
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
 			aphgrpc.FilterToBindValue(s.Params.Filters)...,
 		).
-		QueryStructs(dbrows)
+		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
@@ -531,7 +531,7 @@ func (s *RoleService) getPermissionResourceData(id int64) ([]*user.PermissionDat
 			JOIN permission perm
 			ON auth_role_permission.auth_permission_id = perm.permission_id
 		`).Where("auth_role_permission.auth_role_id = $1", id).
-		QueryStruct(dbrows)
+		QueryStruct(&dbrows)
 	if err != nil {
 		return pdata, err
 	}
@@ -563,7 +563,7 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 		JOIN auth_user_info uinfo
 		ON uinfo.auth_user_id = user.auth_user_id
 	`).Where("auth_user_role.auth_role_id = $1", id).
-		QueryStruct(dbrows)
+		QueryStruct(&dbrows)
 	if err != nil {
 		return udata, err
 	}
@@ -584,7 +584,7 @@ func (s *RoleService) getUserResourceDataWithPagination(id, pagenum, pagesize in
 		ON uinfo.auth_user_id = user.auth_user_id
 	`).Where("auth_user_role.auth_role_id = $1", id).
 		Paginate(uint64(pagenum), uint64(pagesize)).
-		QueryStruct(dbrows)
+		QueryStruct(&dbrows)
 	if err != nil {
 		return udata, err
 	}
