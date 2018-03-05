@@ -560,7 +560,7 @@ func (s *RoleService) getAllRows() ([]*dbRole, error) {
 	var dbrows []*dbRole
 	err := s.Dbh.Select("role.*").
 		From(roleDbTblAlias).
-		QueryStructs(dbrows)
+		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
@@ -569,7 +569,7 @@ func (s *RoleService) getAllSelectedRows() ([]*dbRole, error) {
 	columns := s.MapFieldsToColumns(s.Params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(roleDbTblAlias).
-		QueryStructs(dbrows)
+		QueryStructs(&dbrows)
 	return dbrows, err
 }
 

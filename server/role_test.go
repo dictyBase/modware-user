@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	charSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	charSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
 var seedRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -290,37 +290,25 @@ func TestRoleGetAll(t *testing.T) {
 	defer conn.Close()
 
 	client := pb.NewRoleServiceClient(conn)
-	nrole, err := client.CreateRole(context.Background(), NewRoleWithPermission("fetcher", perm))
+	for i := 0; i < 28; i++ {
+		_, err := client.CreateRole(context.Background(), NewRole(RandString(6)))
+		if err != nil {
+			t.Fatalf("could not store the role %s\n", err)
+		}
+	}
+	lroles, err := client.ListRoles(context.Background(), &jsonapi.SimpleListRequest{})
 	if err != nil {
-		t.Fatalf("could not store the role %s\n", err)
+		t.Fatalf("could not fetch all roles %s\n", err)
 	}
-	grole, err := client.GetRole(
-		context.Background(),
-		&jsonapi.GetRequest{Id: nrole.Data.Id, Fields: "role", Include: "permissions"},
-	)
-	if err != nil {
-		t.Fatalf("could not fetch the role %s\n", err)
+	if len(lroles.Data) != 28 {
+		t.Fatalf("expected entries does not match %d\n", len(lroles.Data))
 	}
-	if len(grole.Data.Attributes.Description) != 0 {
-		t.Fatalf("expecting nil but retrieved %s\n", grole.Data.Attributes.Description)
-	}
-	if m, _ := regexp.MatchString("fields=role&include=permissions", grole.Links.Self); !m {
-		t.Fatalf("expected link %s does not contain fields query parameter", grole.Links.Self)
-	}
-	for _, a := range grole.Included {
-		permData := &pb.PermissionData{}
-		if err := ptypes.UnmarshalAny(a, permData); err != nil {
-			t.Fatalf("error in unmarshaling any types %s\n", err)
-		} else {
-			if permData.Id != perm.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", permData.Id)
-			}
-			if permData.Links.Self != perm.Links.Self {
-				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)
-			}
-			if permData.Attributes.Permission != perm.Data.Attributes.Permission {
-				t.Fatalf("expected permission does not match with %s\n", permData.Attributes.Permission)
-			}
+	for _, role := range lroles.Data {
+		if role.Id < 1 {
+			t.Fatalf("expected id does not match %d\n", role.Id)
+		}
+		if role.Links.Self != fmt.Sprintf("/roles/%d", role.Id) {
+			t.Fatalf("expected link does not match %s\n", role.Links.Self)
 		}
 	}
 }
