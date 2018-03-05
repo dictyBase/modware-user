@@ -312,3 +312,43 @@ func TestRoleGetAll(t *testing.T) {
 		}
 	}
 }
+
+func TestRoleGetAllWithFieldsAndFilter(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewRoleServiceClient(conn)
+	for _, r := range []string{"curator", "manager", "admin", "staff", "user"} {
+		_, err := client.CreateRole(context.Background(), NewRole(r))
+		if err != nil {
+			t.Fatalf("could not store the role %s\n", err)
+		}
+	}
+	lroles, err := client.ListRoles(
+		context.Background(),
+		&jsonapi.SimpleListRequest{
+			Fields: "role",
+			Filter: "role!@er",
+		})
+	if err != nil {
+		t.Fatalf("could not fetch all roles %s\n", err)
+	}
+	if len(lroles.Data) != 3 {
+		t.Fatalf("expected entries does not match %d\n", len(lroles.Data))
+	}
+	if m, _ := regexp.MatchString("fields=role&filter=role!@er", lroles.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain fields query parameter", lroles.Links.Self)
+	}
+	for _, role := range lroles.Data {
+		if len(role.Attributes.Description) != 0 {
+			t.Fatalf("expecting nil but retrieved %s\n", role.Attributes.Description)
+		}
+		if role.Links.Self != fmt.Sprintf("/roles/%d", role.Id) {
+			t.Fatalf("expected link does not match %s\n", role.Links.Self)
+		}
+	}
+}
