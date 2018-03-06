@@ -211,7 +211,11 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.SimpleListReques
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbRoles), nil
+		r, err := s.dbToCollResourceWithRel(dbRoles)
+		if err != nil {
+			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
+		}
+		return r, nil
 	case params.HasFields:
 		s.FieldsStr = r.Fields
 		dbRoles, err := s.getAllSelectedRows()
@@ -785,37 +789,42 @@ func (s *RoleService) dbToCollResource(dbrows []*dbRole) *user.RoleCollection {
 
 func (s *RoleService) dbToCollResourceWithRel(dbrows []*dbRole) (*user.RoleCollection, error) {
 	rdata := s.dbToCollResourceData(dbrows)
-	// related users
-	var users []*user.UserData
-	for i, _ := range rdata {
-		u, err := s.getUserResourceData(dbrows[i].AuthRoleId)
-		if err != nil {
-			return &user.RoleCollection{}, err
-		}
-		rdata[i].Relationships.Users.Data = s.buildUserResourceIdentifiers(u)
-		users = append(users, u...)
-	}
-	incUsers, err := NewUserService(s.Dbh, "users").convertAllToAny(users)
-	if err != nil {
-		return &user.RoleCollection{}, err
-	}
-	// related permissions
-	var perms []*user.PermissionData
-	for i, _ := range rdata {
-		p, err := s.getPermissionResourceData(dbrows[i].AuthRoleId)
-		if err != nil {
-			return &user.RoleCollection{}, err
-		}
-		rdata[i].Relationships.Permissions.Data = s.buildPermissionResourceIdentifiers(p)
-		perms = append(perms, p...)
-	}
-	incPerms, err := NewPermissionService(s.Dbh, "permissions").convertAllToAny(perms)
-	if err != nil {
-		return &user.RoleCollection{}, err
-	}
 	var allInc []*any.Any
-	allInc = append(allInc, incUsers...)
-	allInc = append(allInc, incPerms...)
+	// related users
+	for _, inc := range s.Params.Includes {
+		switch inc {
+		case "users":
+			var users []*user.UserData
+			for i, _ := range rdata {
+				u, err := s.getUserResourceData(dbrows[i].AuthRoleId)
+				if err != nil {
+					return &user.RoleCollection{}, err
+				}
+				rdata[i].Relationships.Users.Data = s.buildUserResourceIdentifiers(u)
+				users = append(users, u...)
+			}
+			incUsers, err := NewUserService(s.Dbh, "users").convertAllToAny(users)
+			if err != nil {
+				return &user.RoleCollection{}, err
+			}
+			allInc = append(allInc, incUsers...)
+		case "permissions":
+			var perms []*user.PermissionData
+			for i, _ := range rdata {
+				p, err := s.getPermissionResourceData(dbrows[i].AuthRoleId)
+				if err != nil {
+					return &user.RoleCollection{}, err
+				}
+				rdata[i].Relationships.Permissions.Data = s.buildPermissionResourceIdentifiers(p)
+				perms = append(perms, p...)
+			}
+			incPerms, err := NewPermissionService(s.Dbh, "permissions").convertAllToAny(perms)
+			if err != nil {
+				return &user.RoleCollection{}, err
+			}
+			allInc = append(allInc, incPerms...)
+		}
+	}
 	return &user.RoleCollection{
 		Data: rdata,
 		Links: &jsonapi.Links{
