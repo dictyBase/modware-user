@@ -465,3 +465,57 @@ func TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestRoleCreatePermissionRelationship(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	permClient := pb.NewPermissionServiceClient(conn)
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRole("fetcher"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	_, err = client.CreatePermissionRelationship(
+		context.Background(),
+		&jsonapi.DataCollection{
+			Id:   nrole.Data.Id,
+			Data: []*jsonapi.Data{&jsonapi.Data{Type: "permissions", Id: perm.Data.Id}},
+		},
+	)
+	if err != nil {
+		t.Fatalf("could not create the relationship with permission %s\n", err)
+	}
+	grole, err := client.GetRole(
+		context.Background(),
+		&jsonapi.GetRequest{Id: nrole.Data.Id, Include: "permissions"},
+	)
+	if err != nil {
+		t.Fatalf("could not fetch the role %s\n", err)
+	}
+	for _, a := range grole.Included {
+		permData := &pb.PermissionData{}
+		if err := ptypes.UnmarshalAny(a, permData); err != nil {
+			t.Fatalf("error in unmarshaling any types %s\n", err)
+		} else {
+			if permData.Id != perm.Data.Id {
+				t.Fatalf("expected id does not match with %s\n", permData.Id)
+			}
+			if permData.Links.Self != perm.Links.Self {
+				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)
+			}
+			if permData.Attributes.Permission != perm.Data.Attributes.Permission {
+				t.Fatalf("expected permission does not match with %s\n", permData.Attributes.Permission)
+			}
+		}
+	}
+}
