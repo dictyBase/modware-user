@@ -519,3 +519,67 @@ func TestRoleCreatePermissionRelationship(t *testing.T) {
 		}
 	}
 }
+
+func TestRoleUpdatePermissionRelationship(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	permClient := pb.NewPermissionServiceClient(conn)
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("create"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRoleWithPermission("creator", perm))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	uperm, err := permClient.CreatePermission(context.Background(), NewPermission("update"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+	_, err = client.UpdatePermissionRelationship(
+		context.Background(),
+		&jsonapi.DataCollection{
+			Id: nrole.Data.Id,
+			Data: []*jsonapi.Data{
+				&jsonapi.Data{
+					Type: "permissions",
+					Id:   uperm.Data.Id,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("could not update the relationship with permission %s\n", err)
+	}
+
+	grole, err := client.GetRole(
+		context.Background(),
+		&jsonapi.GetRequest{Id: nrole.Data.Id, Include: "permissions"},
+	)
+	if err != nil {
+		t.Fatalf("could not fetch the role %s\n", err)
+	}
+	for _, a := range grole.Included {
+		permData := &pb.PermissionData{}
+		if err := ptypes.UnmarshalAny(a, permData); err != nil {
+			t.Fatalf("error in unmarshaling any types %s\n", err)
+		} else {
+			if permData.Id != uperm.Data.Id {
+				t.Fatalf("expected id does not match with %s\n", permData.Id)
+			}
+			if permData.Links.Self != uperm.Links.Self {
+				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)
+			}
+			if permData.Attributes.Permission != uperm.Data.Attributes.Permission {
+				t.Fatalf("expected permission does not match with %s\n", permData.Attributes.Permission)
+			}
+		}
+	}
+}
