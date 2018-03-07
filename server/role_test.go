@@ -352,3 +352,77 @@ func TestRoleGetAllWithFieldsAndFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	permClient := pb.NewPermissionServiceClient(conn)
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	for _, r := range []string{"curator", "manager", "admin", "staff", "user"} {
+		_, err := client.CreateRole(context.Background(), NewRoleWithPermission(r, perm))
+		if err != nil {
+			t.Fatalf("could not store the role %s\n", err)
+		}
+	}
+	lroles, err := client.ListRoles(
+		context.Background(),
+		&jsonapi.SimpleListRequest{
+			Include: "permissions",
+			Filter:  "role!@er",
+		})
+	if err != nil {
+		t.Fatalf("could not fetch all roles %s\n", err)
+	}
+	if len(lroles.Data) != 3 {
+		t.Fatalf("expected entries does not match %d\n", len(lroles.Data))
+	}
+	if m, _ := regexp.MatchString("filter=role!@er&include=permissions", lroles.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain fields query parameter", lroles.Links.Self)
+	}
+	counter := 0
+	for _, role := range lroles.Data {
+		if role.Links.Self != fmt.Sprintf("/roles/%d", role.Id) {
+			t.Fatalf("expected link does not match %s\n", role.Links.Self)
+		}
+		if len(role.Relationships.Permissions.Data) != 1 {
+			t.Fatalf("expected included elements does not match %d\n", len(role.Relationships.Permissions.Data))
+		}
+		if role.Relationships.Permissions.Data[0].Id != perm.Data.Id {
+			t.Fatalf(
+				"expected id %d does not match %d\n",
+				role.Relationships.Permissions.Data[0].Id,
+				perm.Data.Id,
+			)
+		}
+		counter++
+	}
+	if counter != len(lroles.Included) {
+		t.Fatalf("relationship resources %d does not match with %d included resources", counter, len(lroles.Included))
+	}
+	for _, a := range lroles.Included {
+		permData := &pb.PermissionData{}
+		if err := ptypes.UnmarshalAny(a, permData); err != nil {
+			t.Fatalf("error in unmarshaling any types %s\n", err)
+		} else {
+			if permData.Id != perm.Data.Id {
+				t.Fatalf("expected id does not match with %s\n", permData.Id)
+			}
+			if permData.Links.Self != perm.Links.Self {
+				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)
+			}
+			if permData.Attributes.Permission != perm.Data.Attributes.Permission {
+				t.Fatalf("expected permission does not match with %s\n", permData.Attributes.Permission)
+			}
+		}
+	}
+}
