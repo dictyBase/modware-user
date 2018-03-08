@@ -619,3 +619,39 @@ func TestRoleDeletePermissionRelationship(t *testing.T) {
 		t.Fatalf("could not delete the relationship with permission %s\n", err)
 	}
 }
+
+func TestRoleGetPermissionRelationship(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	permClient := pb.NewPermissionServiceClient(conn)
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("get"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRoleWithPermission("getter", perm))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	nperm, err := client.GetRelatedPermissions(
+		context.Background(),
+		&jsonapi.RelationshipRequest{
+			Id: nrole.Data.Id,
+		},
+	)
+	if err != nil {
+		t.Fatalf("could not get relationship permission %s\n", err)
+	}
+	if perm.Data.Id != nperm.Data[0].Id {
+		t.Fatalf("expected id %d does not match retrieved %d id", perm.Data.Id, nperm.Data[0].Id)
+	}
+	if nperm.Links.Self != nrole.Data.Relationships.Permissions.Links.Related {
+		t.Fatalf("expected relationships link does not match %s", nrole.Data.Relationships.Permissions.Links.Related)
+	}
+}
