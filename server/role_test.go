@@ -583,3 +583,39 @@ func TestRoleUpdatePermissionRelationship(t *testing.T) {
 		}
 	}
 }
+
+func TestRoleDeletePermissionRelationship(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	permClient := pb.NewPermissionServiceClient(conn)
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("delete"))
+	if err != nil {
+		t.Fatalf("could not store the permission %s\n", err)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRoleWithPermission("deleter", perm))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	_, err = client.DeletePermissionRelationship(
+		context.Background(),
+		&jsonapi.DataCollection{
+			Id: nrole.Data.Id,
+			Data: []*jsonapi.Data{
+				&jsonapi.Data{
+					Type: "permissions",
+					Id:   perm.Data.Id,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("could not delete the relationship with permission %s\n", err)
+	}
+}
