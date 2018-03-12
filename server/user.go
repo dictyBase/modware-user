@@ -434,13 +434,13 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 		return &user.User{}, status.Error(codes.Internal, err.Error())
 	}
 	dbusrInfo := s.attrTodbUserInfo(r.Data.Attributes)
-	usrInfoCols := aphgrpc.GetDefinedTags(dbusrInfo, "db")
+	defUsrInfoCols := aphgrpc.GetDefinedTags(dbusrInfo, "db")
 	dbusrInfo.AuthUserId = dbcuser.AuthUserId
-	if len(usrInfoCols) > 0 {
+	if len(defUsrInfoCols) > 0 {
 		err = s.Dbh.InsertInto("auth_user_info").
-			Columns(userInfoCols...).
+			Columns(defUsrInfoCols...).
 			Record(dbusrInfo).
-			Returning(usrInfoCols...).
+			Returning(userInfoCols...).
 			QueryStruct(dbusrInfo)
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
@@ -510,12 +510,14 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 		grpc.SetTrailer(ctx, aphgrpc.ErrNotFound)
 		return &user.User{}, status.Error(codes.NotFound, fmt.Sprintf("id %d not found", r.Id))
 	}
-	s.SetBaseURL(ctx)
 	dbcuser := s.attrTodbCoreUser(r.Data.Attributes)
 	usrMap := aphgrpc.GetDefinedTagsWithValue(dbcuser, "db")
 	if len(usrMap) > 0 {
-		_, err := s.Dbh.Update("auth_user").SetMap(usrMap).
-			Where("auth_user_id = $1", r.Data.Id).Exec()
+		err := s.Dbh.Update("auth_user").
+			SetMap(usrMap).
+			Where("auth_user_id = $1", r.Data.Id).
+			Returning([]string{"created_at", "updated_at"}...).
+			QueryStruct(dbcuser)
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
 			return &user.User{}, status.Error(codes.Internal, err.Error())
@@ -524,23 +526,35 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 	dbusrInfo := s.attrTodbUserInfo(r.Data.Attributes)
 	usrInfoMap := aphgrpc.GetDefinedTagsWithValue(dbusrInfo, "db")
 	if len(usrInfoMap) > 0 {
-		_, err := s.Dbh.Update("auth_user_info").SetMap(usrInfoMap).
-			Where("auth_user_id = $1", r.Data.Id).Exec()
+		err := s.Dbh.Update("auth_user_info").
+			SetMap(usrInfoMap).
+			Where("auth_user_id = $1", r.Data.Id).
+			Returning(userInfoCols...).
+			QueryStruct(dbusrInfo)
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
 			return &user.User{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	for _, role := range r.Data.Relationships.Roles.Data {
-		_, err := s.Dbh.Update("auth_user_role").
-			Set("auth_role_id", role.Id).
-			Where("auth_user_id = $1", r.Data.Id).Exec()
-		if err != nil {
-			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
-			return &user.User{}, status.Error(codes.Internal, err.Error())
+	rstruct := structs.New(r).Field("Data").Field("Relationships")
+	if !rstruct.IsZero() {
+		if !rstruct.Field("Roles").IsZero() {
+			for _, role := range r.Data.Relationships.Roles.Data {
+				_, err := s.Dbh.Update("auth_user_role").
+					Set("auth_role_id", role.Id).
+					Where("auth_user_id = $1", r.Data.Id).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseUpdate)
+					return &user.User{}, status.Error(codes.Internal, err.Error())
+				}
+			}
 		}
 	}
-	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
+	s.SetBaseURL(ctx)
+	return s.buildResource(
+		r.Data.Id,
+		s.dbToResourceAttributes(s.mergeTodbUser(dbcuser, dbusrInfo)),
+	), nil
 }
 
 func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
