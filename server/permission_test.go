@@ -30,6 +30,7 @@ func runGRPCServer(db *sql.DB) {
 	grpcS := grpc.NewServer()
 	pb.RegisterPermissionServiceServer(grpcS, NewPermissionService(dbh, "permissions"))
 	pb.RegisterRoleServiceServer(grpcS, NewRoleService(dbh, "roles"))
+	pb.RegisterUserServiceServer(grpcS, NewUserService(dbh, "users"))
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		panic(err)

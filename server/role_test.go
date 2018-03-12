@@ -193,7 +193,7 @@ func TestRoleGet(t *testing.T) {
 	}
 	grole, err := client.GetRole(context.Background(), &jsonapi.GetRequest{Id: nrole.Data.Id})
 	if err != nil {
-		t.Fatalf("could not delete the role %s\n", err)
+		t.Fatalf("could not fetch the role %s\n", err)
 	}
 	if grole.Data.Id != nrole.Data.Id {
 		t.Fatalf("expected id %d does not match %d\n", nrole.Data.Id, grole.Data.Id)

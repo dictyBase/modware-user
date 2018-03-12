@@ -7,6 +7,7 @@ import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	"github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/fatih/structs"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -27,7 +28,12 @@ const (
 	userDbTable = "auth_user user"
 )
 
-var coreUserCols = []string{"first_name", "last_name", "email"}
+var coreUserCols = []string{
+	"first_name",
+	"last_name",
+	"email",
+	"is_active",
+}
 var userInfoCols = []string{
 	"auth_user_id",
 	"organization",
@@ -39,8 +45,6 @@ var userInfoCols = []string{
 	"zipcode",
 	"country",
 	"phone",
-	"created_at",
-	"updated_at",
 }
 
 type dbUser struct {
@@ -63,10 +67,13 @@ type dbUser struct {
 }
 
 type dbCoreUser struct {
-	FirstName string `db:"first_name"`
-	LastName  string `db:"last_name"`
-	Email     string `db:"email"`
-	IsActive  bool   `db:"is_active"`
+	AuthUserId int64        `db:"auth_user_id"`
+	FirstName  string       `db:"first_name"`
+	LastName   string       `db:"last_name"`
+	Email      string       `db:"email"`
+	IsActive   bool         `db:"is_active"`
+	CreatedAt  dat.NullTime `db:"created_at"`
+	UpdatedAt  dat.NullTime `db:"updated_at"`
 }
 
 type dbUserInfo struct {
@@ -80,8 +87,6 @@ type dbUserInfo struct {
 	Zipcode       dat.NullString `db:"zipcode"`
 	Country       dat.NullString `db:"country"`
 	Phone         dat.NullString `db:"phone"`
-	CreatedAt     dat.NullTime   `db:"created_at"`
-	UpdatedAt     dat.NullTime   `db:"updated_at"`
 }
 
 type UserService struct {
@@ -417,40 +422,51 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 }
 
 func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest) (*user.User, error) {
-	var userId int64
 	dbcuser := s.attrTodbCoreUser(r.Data.Attributes)
+	retcols := []string{"auth_user_id", "created_at", "updated_at"}
 	err := s.Dbh.InsertInto("auth_user").
 		Columns(coreUserCols...).
 		Record(dbcuser).
-		Returning("auth_user_id").QueryScalar(&userId)
+		Returning(retcols...).
+		QueryStruct(dbcuser)
 	if err != nil {
 		grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
 		return &user.User{}, status.Error(codes.Internal, err.Error())
 	}
 	dbusrInfo := s.attrTodbUserInfo(r.Data.Attributes)
 	usrInfoCols := aphgrpc.GetDefinedTags(dbusrInfo, "db")
-	dbusrInfo.AuthUserId = userId
+	dbusrInfo.AuthUserId = dbcuser.AuthUserId
 	if len(usrInfoCols) > 0 {
-		_, err = s.Dbh.InsertInto("auth_user_info").
+		err = s.Dbh.InsertInto("auth_user_info").
 			Columns(userInfoCols...).
-			Record(dbusrInfo).Exec()
+			Record(dbusrInfo).
+			Returning(usrInfoCols...).
+			QueryStruct(dbusrInfo)
 		if err != nil {
 			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
 			return &user.User{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	for _, role := range r.Data.Relationships.Roles.Data {
-		_, err = s.Dbh.InsertInto("auth_user_role").
-			Columns("auth_user_id", "auth_role_id").
-			Values(userId, role.Id).Exec()
-		if err != nil {
-			grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
-			return &user.User{}, status.Error(codes.Internal, err.Error())
+	rstruct := structs.New(r).Field("Data").Field("Relationships")
+	if !rstruct.IsZero() {
+		if !rstruct.Field("Roles").IsZero() {
+			for _, role := range r.Data.Relationships.Roles.Data {
+				_, err = s.Dbh.InsertInto("auth_user_role").
+					Columns("auth_user_id", "auth_role_id").
+					Values(dbcuser.AuthUserId, role.Id).Exec()
+				if err != nil {
+					grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
+					return &user.User{}, status.Error(codes.Internal, err.Error())
+				}
+			}
 		}
 	}
 	s.SetBaseURL(ctx)
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
-	return s.buildResource(userId, r.Data.Attributes), nil
+	return s.buildResource(
+		dbcuser.AuthUserId,
+		s.dbToResourceAttributes(s.mergeTodbUser(dbcuser, dbusrInfo)),
+	), nil
 }
 
 func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
@@ -852,6 +868,27 @@ func (s *UserService) dbToCollResourceWithRelAndPagination(count int64, dbUsers 
 
 // -- Various utility functions
 
+func (s *UserService) mergeTodbUser(dbcuser *dbCoreUser, dbusrInfo *dbUserInfo) *dbUser {
+	return &dbUser{
+		AuthUserId:    dbcuser.AuthUserId,
+		FirstName:     dbcuser.FirstName,
+		LastName:      dbcuser.LastName,
+		Email:         dbcuser.Email,
+		IsActive:      dbcuser.IsActive,
+		CreatedAt:     dbcuser.CreatedAt,
+		UpdatedAt:     dbcuser.UpdatedAt,
+		Organization:  dbusrInfo.Organization,
+		GroupName:     dbusrInfo.GroupName,
+		FirstAddress:  dbusrInfo.FirstAddress,
+		SecondAddress: dbusrInfo.SecondAddress,
+		City:          dbusrInfo.City,
+		State:         dbusrInfo.State,
+		Zipcode:       dbusrInfo.Zipcode,
+		Country:       dbusrInfo.Country,
+		Phone:         dbusrInfo.Phone,
+	}
+}
+
 func (s *UserService) attrTodbCoreUser(attr *user.UserAttributes) *dbCoreUser {
 	return &dbCoreUser{
 		FirstName: attr.FirstName,
@@ -871,8 +908,6 @@ func (s *UserService) attrTodbUserInfo(attr *user.UserAttributes) *dbUserInfo {
 		State:         dat.NullStringFrom(attr.State),
 		Zipcode:       dat.NullStringFrom(attr.Zipcode),
 		Country:       dat.NullStringFrom(attr.Country),
-		CreatedAt:     dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.CreatedAt)),
-		UpdatedAt:     dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.UpdatedAt)),
 	}
 }
 
