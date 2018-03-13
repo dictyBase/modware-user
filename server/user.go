@@ -101,26 +101,26 @@ func NewUserService(dbh *runner.DB, pathPrefix string) *UserService {
 			PathPrefix: pathPrefix,
 			Include:    []string{"roles"},
 			FilToColumns: map[string]string{
-				"first_name": "user.first_name",
-				"last_name":  "user.last_name",
-				"email":      "user.email",
+				"first_name": "auth_user.first_name",
+				"last_name":  "auth_user.last_name",
+				"email":      "auth_user.email",
 			},
 			FieldsToColumns: map[string]string{
-				"first_name":     "user.first_name",
-				"last_name":      "user.last_name",
-				"email":          "user.email",
-				"created_at":     "user.created_at",
-				"updated_at":     "user.updated_at",
-				"organization":   "uinfo.organization",
-				"group_name":     "uinfo.group_name",
-				"first_address":  "uinfo.first_address",
-				"second_address": "uinfo.second_address",
-				"city":           "uinfo.city",
-				"state":          "uinfo.state",
-				"zipcode":        "uinfo.zipcode",
-				"country":        "uinfo.country",
-				"phone":          "uinfo.phone",
-				"is_active":      "uinfo.is_active",
+				"first_name":     "auth_user.first_name",
+				"last_name":      "auth_user.last_name",
+				"email":          "auth_user.email",
+				"created_at":     "auth_user.created_at",
+				"updated_at":     "auth_user.updated_at",
+				"organization":   "auth_user_info.organization",
+				"group_name":     "auth_user_info.group_name",
+				"first_address":  "auth_user_info.first_address",
+				"second_address": "auth_user_info.second_address",
+				"city":           "auth_user_info.city",
+				"state":          "auth_user_info.state",
+				"zipcode":        "auth_user_info.zipcode",
+				"country":        "auth_user_info.country",
+				"phone":          "auth_user_info.phone",
+				"is_active":      "auth_user_info.is_active",
 			},
 			ReqAttrs: []string{"FirstName", "LastName", "Email"},
 		},
@@ -652,9 +652,9 @@ func (s *UserService) getResourceWithSelectedAttr(id int64) (*user.User, error) 
 
 func (s *UserService) getResource(id int64) (*user.User, error) {
 	dusr := new(dbUser)
-	err := s.Dbh.Select("user.*", "uinfo.*").
-		From(usrTablesJoin).
-		Where("user.auth_user_id = $1", id).
+	err := s.Dbh.Select("auth_user.*", "auth_user_info.*").
+		From("auth_user").
+		Where("auth_user.auth_user_id = $1", id).
 		QueryStruct(dusr)
 	if err != nil {
 		return &user.User{}, err
