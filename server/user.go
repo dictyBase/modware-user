@@ -434,8 +434,8 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 		return &user.User{}, status.Error(codes.Internal, err.Error())
 	}
 	dbusrInfo := s.attrTodbUserInfo(r.Data.Attributes)
-	defUsrInfoCols := aphgrpc.GetDefinedTags(dbusrInfo, "db")
 	dbusrInfo.AuthUserId = dbcuser.AuthUserId
+	defUsrInfoCols := aphgrpc.GetDefinedTags(dbusrInfo, "db")
 	if len(defUsrInfoCols) > 0 {
 		err = s.Dbh.InsertInto("auth_user_info").
 			Columns(defUsrInfoCols...).
@@ -626,8 +626,8 @@ func (s *UserService) DeleteRoleRelationship(ctx context.Context, r *jsonapi.Dat
 // All helper functions
 
 func (s *UserService) existsResource(id int64) (bool, error) {
-	r, err := s.Dbh.Select("user.auth_user_id").From(userDbTable).
-		Where("user.auth_user_id = $1", id).Exec()
+	r, err := s.Dbh.Select("auth_user_id").From("auth_user").
+		Where("auth_user_id = $1", id).Exec()
 	if err != nil {
 		return false, err
 	}
