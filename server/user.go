@@ -35,7 +35,7 @@ const (
 			JOIN auth_user_info
 			ON auth_user.auth_user_id = auth_user_info.auth_user_id
 	`
-	userDbTable = "auth_user user"
+	userDbTable = "auth_user"
 )
 
 var usrTableStmt = fmt.Sprintf("%s %s", usrTableSel, usrTablesJoin)
@@ -213,6 +213,12 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	s.SetBaseURL(ctx)
 	// has pagination query parameters
 	if aphgrpc.HasPagination(r) {
+		if r.Pagenum == 0 {
+			r.Pagenum = aphgrpc.DefaultPagenum
+		}
+		if r.Pagesize == 0 {
+			r.Pagesize = aphgrpc.DefaultPagesize
+		}
 		switch {
 		// filter, fields and include parameters
 		case params.HasFields && params.HasInclude && params.HasFilter:
