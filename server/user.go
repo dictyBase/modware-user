@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
@@ -20,13 +21,24 @@ import (
 )
 
 const (
+	usrTableSel = `
+			SELECT
+				auth_user.auth_user_id,
+				CAST(auth_user.email AS TEXT),
+				auth_user.first_name,
+				auth_user.last_name,
+				auth_user.is_active,
+				auth_user_info.*
+			FROM auth_user
+		`
 	usrTablesJoin = `
-			auth_user user
-			JOIN auth_user_info uinfo
-			ON user.auth_user_id = uinfo.auth_user_id
+			JOIN auth_user_info
+			ON auth_user.auth_user_id = auth_user_info.auth_user_id
 	`
 	userDbTable = "auth_user user"
 )
+
+var usrTableStmt = fmt.Sprintf("%s %s", usrTableSel, usrTablesJoin)
 
 var coreUserCols = []string{
 	"first_name",
@@ -48,22 +60,23 @@ var userInfoCols = []string{
 }
 
 type dbUser struct {
-	AuthUserId    int64          `db:"auth_user_id"`
-	FirstName     string         `db:"first_name"`
-	LastName      string         `db:"last_name"`
-	Email         string         `db:"email"`
-	IsActive      bool           `db:"is_active"`
-	Organization  dat.NullString `db:"organization"`
-	GroupName     dat.NullString `db:"group_name"`
-	FirstAddress  dat.NullString `db:"first_address"`
-	SecondAddress dat.NullString `db:"second_address"`
-	City          dat.NullString `db:"city"`
-	State         dat.NullString `db:"state"`
-	Zipcode       dat.NullString `db:"zipcode"`
-	Country       dat.NullString `db:"country"`
-	Phone         dat.NullString `db:"phone"`
-	CreatedAt     dat.NullTime   `db:"created_at"`
-	UpdatedAt     dat.NullTime   `db:"updated_at"`
+	AuthUserId     int64          `db:"auth_user_id"`
+	FirstName      string         `db:"first_name"`
+	LastName       string         `db:"last_name"`
+	Email          string         `db:"email"`
+	IsActive       bool           `db:"is_active"`
+	Organization   dat.NullString `db:"organization"`
+	GroupName      dat.NullString `db:"group_name"`
+	FirstAddress   dat.NullString `db:"first_address"`
+	SecondAddress  dat.NullString `db:"second_address"`
+	City           dat.NullString `db:"city"`
+	State          dat.NullString `db:"state"`
+	Zipcode        dat.NullString `db:"zipcode"`
+	Country        dat.NullString `db:"country"`
+	Phone          dat.NullString `db:"phone"`
+	CreatedAt      dat.NullTime   `db:"created_at"`
+	UpdatedAt      dat.NullTime   `db:"updated_at"`
+	AuthUserInfoId int64          `db:"auth_user_info_id"`
 }
 
 type dbCoreUser struct {
@@ -641,9 +654,13 @@ func (s *UserService) existsResource(id int64) (bool, error) {
 
 func (s *UserService) getResourceWithSelectedAttr(id int64) (*user.User, error) {
 	dusr := new(dbUser)
-	columns := s.MapFieldsToColumns(s.Params.Fields)
-	err := s.Dbh.Select(columns...).From(usrTablesJoin).
-		Where("user.auth_user_id = $1", id).QueryStruct(dusr)
+	err := s.Dbh.SQL(
+		fmt.Sprintf(
+			"SELECT %s FROM auth_user %s %s",
+			strings.Join(s.mapFieldsToColumnsWithCast(s.Params.Fields), ","),
+			usrTablesJoin,
+			"WHERE auth_user.auth_user_id = $1",
+		), id).QueryStruct(dusr)
 	if err != nil {
 		return &user.User{}, err
 	}
@@ -652,10 +669,12 @@ func (s *UserService) getResourceWithSelectedAttr(id int64) (*user.User, error) 
 
 func (s *UserService) getResource(id int64) (*user.User, error) {
 	dusr := new(dbUser)
-	err := s.Dbh.Select("auth_user.*", "auth_user_info.*").
-		From("auth_user").
-		Where("auth_user.auth_user_id = $1", id).
-		QueryStruct(dusr)
+	err := s.Dbh.SQL(
+		fmt.Sprintf(
+			"%s %s",
+			usrTableStmt,
+			"WHERE auth_user.auth_user_id = $1",
+		), id).QueryStruct(dusr)
 	if err != nil {
 		return &user.User{}, err
 	}
@@ -666,55 +685,71 @@ func (s *UserService) getResource(id int64) (*user.User, error) {
 
 func (s *UserService) getAllRows() ([]*dbUser, error) {
 	var dusrRows []*dbUser
-	err := s.Dbh.Select("user.*", "uinfo.*").
-		From(usrTablesJoin).
-		QueryStructs(dusrRows)
+	err := s.Dbh.SQL(usrTableStmt).QueryStructs(&dusrRows)
 	return dusrRows, err
 }
 
 func (s *UserService) getAllRowsWithPaging(pagenum int64, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
-	err := s.Dbh.Select("user.*", "uinfo.*").
-		From(usrTablesJoin).
-		Paginate(uint64(pagenum), uint64(pagesize)).
-		QueryStructs(dusrRows)
+	err := s.Dbh.SQL(
+		fmt.Sprintf(
+			"%s LIMIT %d OFFSET %d",
+			usrTableStmt,
+			pagesize,
+			(pagenum-1)*pagesize,
+		)).
+		QueryStructs(&dusrRows)
 	return dusrRows, err
 }
 
 func (s *UserService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
-	columns := s.MapFieldsToColumns(s.Params.Fields)
-	err := s.Dbh.Select(columns...).
-		From(usrTablesJoin).
-		Paginate(uint64(pagenum), uint64(pagesize)).
-		QueryStructs(dusrRows)
+	err := s.Dbh.SQL(
+		fmt.Sprintf(
+			"SELECT %s FROM auth_user %s LIMIT %d OFFSET %d",
+			strings.Join(s.mapFieldsToColumnsWithCast(s.Params.Fields), ","),
+			usrTablesJoin,
+			pagesize,
+			(pagenum-1)*pagesize,
+		)).
+		QueryStructs(&dusrRows)
 	return dusrRows, err
 }
 
 func (s *UserService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
-	err := s.Dbh.Select("user.*", "uinfo.*").
-		From(usrTablesJoin).
-		Scope(
+	var bindVals []string
+	for _, v := range aphgrpc.FilterToBindValue(s.Params.Filters) {
+		bindVals = append(bindVals, v.(string))
+	}
+	err := s.Dbh.SQL(
+		fmt.Sprintf(
+			"%s %s LIMIT %d OFFSET %d",
+			usrTableStmt,
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
-			aphgrpc.FilterToBindValue(s.Params.Filters)...,
-		).
-		Paginate(uint64(pagenum), uint64(pagesize)).
-		QueryStructs(dusrRows)
+			pagesize,
+			(pagenum-1)*pagesize,
+		), strings.Join(bindVals, ","),
+	).QueryStructs(&dusrRows)
 	return dusrRows, err
 }
 
 func (s *UserService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
-	columns := s.MapFieldsToColumns(s.Params.Fields)
-	err := s.Dbh.Select(columns...).
-		From(usrTablesJoin).
-		Scope(
+	var bindVals []string
+	for _, v := range aphgrpc.FilterToBindValue(s.Params.Filters) {
+		bindVals = append(bindVals, v.(string))
+	}
+	err := s.Dbh.SQL(
+		fmt.Sprintf(
+			"SELECT %s FROM auth_user %s %s LIMIT %d OFFSET %d",
+			strings.Join(s.mapFieldsToColumnsWithCast(s.Params.Fields), ","),
+			usrTablesJoin,
 			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
-			aphgrpc.FilterToBindValue(s.Params.Filters)...,
-		).
-		Paginate(uint64(pagenum), uint64(pagesize)).
-		QueryStructs(dusrRows)
+			pagesize,
+			(pagenum-1)*pagesize,
+		), strings.Join(bindVals, ","),
+	).QueryStructs(dusrRows)
 	return dusrRows, err
 }
 
@@ -935,4 +970,16 @@ func (s *UserService) convertAllToAny(users []*user.UserData) ([]*any.Any, error
 		aslice[i] = pkg
 	}
 	return aslice, nil
+}
+
+func (s *UserService) mapFieldsToColumnsWithCast(fields []string) []string {
+	var columns []string
+	for _, c := range s.MapFieldsToColumns(fields) {
+		if c == "auth_user.email" {
+			columns = append(columns, fmt.Sprintf("CAST(%s AS TEXT)", c))
+		} else {
+			columns = append(columns, c)
+		}
+	}
+	return columns
 }
