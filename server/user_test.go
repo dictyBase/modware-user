@@ -272,3 +272,69 @@ func TestGetUserWithRole(t *testing.T) {
 		}
 	}
 }
+
+func TestGetAllUsers(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewUserServiceClient(conn)
+	for i := 0; i < 28; i++ {
+		_, err := client.CreateUser(
+			context.Background(),
+			NewUser(fmt.Sprintf("%s@seinfeld.com", RandString(10))),
+		)
+		if err != nil {
+			t.Fatalf("could not store the role %s\n", err)
+		}
+	}
+	lusers, err := client.ListUsers(context.Background(), &jsonapi.ListRequest{})
+	if err != nil {
+		t.Fatalf("could not fetch all users %s\n", err)
+	}
+	if len(lusers.Data) != 10 {
+		t.Fatalf("expected entries does not match %d\n", len(lusers.Data))
+	}
+	if m, _ := regexp.MatchString("pagenum=1&pagesize=10", lusers.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", lusers.Links.Self)
+	}
+	for _, user := range lusers.Data {
+		if user.Id < 1 {
+			t.Fatalf("expected id does not match %d\n", user.Id)
+		}
+		if user.Links.Self != fmt.Sprintf("/users/%d", user.Id) {
+			t.Fatalf("expected link does not match %s\n", user.Links.Self)
+		}
+	}
+	page := lusers.Meta.Pagination
+	if page.Records != 28 {
+		t.Logf("expected total no of records does not match %d\n", page.Records)
+	}
+	if page.Size != 10 {
+		t.Logf("expected page size does not match %d\n", page.Size)
+	}
+	if page.Number != 1 {
+		t.Logf("expected page number does not match %d\n", page.Number)
+	}
+	if page.Total != 3 {
+		t.Logf("expected no of pages does not match %d\n", page.Total)
+	}
+
+	tusers, err := client.ListUsers(context.Background(), &jsonapi.ListRequest{Pagenum: 3})
+	if err != nil {
+		t.Fatalf("could not fetch all users %s\n", err)
+	}
+	//if len(tusers.Data) != 8 {
+	//t.Fatalf("expected entries does not match %d\n", len(tusers.Data))
+	//}
+	if m, _ := regexp.MatchString("pagenum=3&pagesize=10", tusers.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", tusers.Links.Self)
+	}
+	tpage := tusers.Meta.Pagination
+	if tpage.Number != 3 {
+		t.Logf("expected page number does not match %d\n", tpage.Number)
+	}
+}
