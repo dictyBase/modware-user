@@ -327,14 +327,53 @@ func TestGetAllUsers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not fetch all users %s\n", err)
 	}
-	//if len(tusers.Data) != 8 {
-	//t.Fatalf("expected entries does not match %d\n", len(tusers.Data))
-	//}
+	if len(tusers.Data) != 8 {
+		t.Fatalf("expected entries does not match %d\n", len(tusers.Data))
+	}
 	if m, _ := regexp.MatchString("pagenum=3&pagesize=10", tusers.Links.Self); !m {
 		t.Fatalf("expected link %s does not contain include query parameter", tusers.Links.Self)
 	}
 	tpage := tusers.Meta.Pagination
 	if tpage.Number != 3 {
 		t.Logf("expected page number does not match %d\n", tpage.Number)
+	}
+
+	susers, err := client.ListUsers(context.Background(), &jsonapi.ListRequest{Pagesize: 5})
+	if err != nil {
+		t.Fatalf("could not fetch all users %s\n", err)
+	}
+	if len(susers.Data) != 5 {
+		t.Fatalf("expected entries does not match %d\n", len(susers.Data))
+	}
+	if m, _ := regexp.MatchString("pagenum=1&pagesize=5", susers.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", susers.Links.Self)
+	}
+	spage := susers.Meta.Pagination
+	if spage.Number != 1 {
+		t.Logf("expected page number does not match %d\n", spage.Number)
+	}
+	if spage.Size != 5 {
+		t.Logf("expected page size does not match %d\n", spage.Size)
+	}
+
+	ausers, err := client.ListUsers(context.Background(), &jsonapi.ListRequest{Pagesize: 5, Pagenum: 2})
+	if err != nil {
+		t.Fatalf("could not fetch all users %s\n", err)
+	}
+	if len(ausers.Data) != 5 {
+		t.Fatalf("expected entries does not match %d\n", len(ausers.Data))
+	}
+	if m, _ := regexp.MatchString("pagenum=2&pagesize=5", ausers.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", ausers.Links.Self)
+	}
+	apage := ausers.Meta.Pagination
+	if apage.Number != 2 {
+		t.Logf("expected page number does not match %d\n", apage.Number)
+	}
+	if apage.Size != 5 {
+		t.Logf("expected page size does not match %d\n", apage.Size)
+	}
+	if apage.Total != 6 {
+		t.Logf("expected no of pages does not match %d\n", apage.Total)
 	}
 }
