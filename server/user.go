@@ -762,11 +762,11 @@ func (s *UserService) getRoleResourceData(id int64) ([]*user.RoleData, error) {
 			auth_user_role
 			JOIN auth_role role
 			ON auth_user_role.auth_role_id = role.auth_role_id
-		`).Where("auth_user_role.auth_user_id = $1", id).QueryStructs(drole)
+		`).Where("auth_user_role.auth_user_id = $1", id).QueryStructs(&drole)
 	if err != nil {
 		return rdata, err
 	}
-	return NewRoleService(s.Dbh, s.GetPathPrefix()).dbToCollResourceData(drole), nil
+	return NewRoleService(s.Dbh, "roles").dbToCollResourceData(drole), nil
 }
 
 func (s *UserService) buildRoleResourceIdentifiers(roles []*user.RoleData) []*jsonapi.Data {
