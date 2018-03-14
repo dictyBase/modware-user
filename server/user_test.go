@@ -3,9 +3,11 @@ package server
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
+	"github.com/golang/protobuf/ptypes"
 
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"google.golang.org/grpc"
@@ -209,5 +211,64 @@ func TestGetUser(t *testing.T) {
 	}
 	if guser.Data.Attributes.Country != "US" {
 		t.Fatalf("expected country name does not match %s\n", guser.Data.Attributes.Country)
+	}
+}
+
+func TestGetUserWithRole(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	roleClient := pb.NewRoleServiceClient(conn)
+	nrole, err := roleClient.CreateRole(context.Background(), NewRole("fetcher"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	client := pb.NewUserServiceClient(conn)
+	nuser, err := client.CreateUser(context.Background(), NewUserWithRole("bobsacamano@seinfeld.org", nrole))
+	if err != nil {
+		t.Fatalf("could not store the user %s\n", err)
+	}
+
+	guser, err := client.GetUser(
+		context.Background(),
+		&jsonapi.GetRequest{Id: nuser.Data.Id, Include: "roles"},
+	)
+	if err != nil {
+		t.Fatalf("could not fetch the user %s\n", err)
+	}
+	if guser.Data.Id != nuser.Data.Id {
+		t.Fatalf("expected id %d does not match %d\n", nuser.Data.Id, guser.Data.Id)
+	}
+	if guser.Data.Attributes.Email != "bobsacamano@seinfeld.org" {
+		t.Fatalf("expected email %s does not match %s\n", guser.Data.Attributes.Email, "bobsacamano@seinfeld.org")
+	}
+	if !guser.Data.Attributes.IsActive {
+		t.Fatal("expected user is expected to be active")
+	}
+	if m, _ := regexp.MatchString("include=roles", guser.Links.Self); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", guser.Links.Self)
+	}
+	if len(guser.Included) != 1 {
+		t.Fatalf("expected no of included roled does match with %d\n", len(guser.Included))
+	}
+	for _, a := range guser.Included {
+		roleData := &pb.RoleData{}
+		if err := ptypes.UnmarshalAny(a, roleData); err != nil {
+			t.Fatalf("error in unmarshaling any types %s\n", err)
+		} else {
+			if roleData.Id != nrole.Data.Id {
+				t.Fatalf("expected id does not match with %s\n", roleData.Id)
+			}
+			if roleData.Links.Self != nrole.Links.Self {
+				t.Fatalf("expected link does not match with %s\n", roleData.Links.Self)
+			}
+			if roleData.Attributes.Role != nrole.Data.Attributes.Role {
+				t.Fatalf("expected permission does not match with %s\n", roleData.Attributes.Role)
+			}
+		}
 	}
 }
