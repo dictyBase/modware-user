@@ -549,3 +549,38 @@ func TestGetAllUsersWithRoles(t *testing.T) {
 		}
 	}
 }
+
+func TestGetRelatedRoles(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	roleClient := pb.NewRoleServiceClient(conn)
+	role, err := roleClient.CreateRole(context.Background(), NewRole("fetcher"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	client := pb.NewUserServiceClient(conn)
+	nuser, err := client.CreateUser(context.Background(), NewUserWithRole("bobsacamano@seinfeld.org", role))
+	if err != nil {
+		t.Fatalf("could not store the user %s\n", err)
+	}
+	nrole, err := client.GetRelatedRoles(
+		context.Background(),
+		&jsonapi.RelationshipRequest{
+			Id: nuser.Data.Id,
+		},
+	)
+	if err != nil {
+		t.Fatalf("could not fetch role relationships %s\n", err)
+	}
+	if role.Data.Id != nrole.Data[0].Id {
+		t.Fatalf("expected id %d does not match retrieved %d id", role.Data.Id, nrole.Data[0].Id)
+	}
+	if nuser.Data.Relationships.Roles.Links.Related != nrole.Links.Self {
+		t.Fatalf("expected relationships link does not match %s", nrole.Links.Self)
+	}
+}
