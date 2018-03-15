@@ -286,7 +286,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
 		case params.HasFilter:
 			s.FilterStr = r.Filter
-			count, err := s.GetAllFilteredCount(usrTablesJoin)
+			count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
