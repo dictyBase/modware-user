@@ -462,3 +462,90 @@ func TestGetAllUsersWithFilter(t *testing.T) {
 		t.Logf("expected no of pages does not match %d\n", page.Total)
 	}
 }
+
+func TestGetAllUsersWithRoles(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	roleClient := pb.NewRoleServiceClient(conn)
+	nrole, err := roleClient.CreateRole(context.Background(), NewRole("editor"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	client := pb.NewUserServiceClient(conn)
+	for i := 0; i < 20; i++ {
+		_, err := client.CreateUser(
+			context.Background(),
+			NewUserWithRole(
+				fmt.Sprintf("%s@seinfeld.com", RandString(10)),
+				nrole,
+			),
+		)
+		if err != nil {
+			t.Fatalf("could not store the user %s\n", err)
+		}
+	}
+	for i := 0; i < 20; i++ {
+		_, err := client.CreateUser(
+			context.Background(),
+			NewUser(fmt.Sprintf("%s@kramer.com", RandString(10))),
+		)
+		if err != nil {
+			t.Fatalf("could not store the user %s\n", err)
+		}
+	}
+	fusers, err := client.ListUsers(
+		context.Background(),
+		&jsonapi.ListRequest{
+			Pagesize: 5,
+			Filter:   "email=@seinfeld",
+			Include:  "roles",
+		})
+	if m, _ := regexp.MatchString("pagenum=4&pagesize=5", fusers.Links.Last); !m {
+		t.Fatalf("expected last link does not match %s", fusers.Links.Last)
+	}
+	page := fusers.Meta.Pagination
+	if page.Records != 20 {
+		t.Logf("expected total no of records does not match %d\n", page.Records)
+	}
+	counter := 0
+	for _, user := range fusers.Data {
+		if user.Links.Self != fmt.Sprintf("/users/%d", user.Id) {
+			t.Fatalf("expected link does not match %s\n", user.Links.Self)
+		}
+		if len(user.Relationships.Roles.Data) != 1 {
+			t.Fatalf("expected included elements does not match %d\n", len(user.Relationships.Roles.Data))
+		}
+		if user.Relationships.Roles.Data[0].Id != nrole.Data.Id {
+			t.Fatalf(
+				"expected id %d does not match %d\n",
+				user.Relationships.Roles.Data[0].Id,
+				nrole.Data.Id,
+			)
+		}
+		counter++
+	}
+	if counter != len(fusers.Included) {
+		t.Fatalf("relationship resources %d does not match with %d included resources", counter, len(fusers.Included))
+	}
+	for _, a := range fusers.Included {
+		roleData := &pb.RoleData{}
+		if err := ptypes.UnmarshalAny(a, roleData); err != nil {
+			t.Fatalf("error in unmarshaling any types %s\n", err)
+		} else {
+			if roleData.Id != nrole.Data.Id {
+				t.Fatalf("expected id does not match with %s\n", roleData.Id)
+			}
+			if roleData.Links.Self != nrole.Links.Self {
+				t.Fatalf("expected link does not match with %s\n", roleData.Links.Self)
+			}
+			if roleData.Attributes.Role != nrole.Data.Attributes.Role {
+				t.Fatalf("expected permission does not match with %s\n", roleData.Attributes.Role)
+			}
+		}
+	}
+}
