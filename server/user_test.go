@@ -298,8 +298,17 @@ func TestGetAllUsers(t *testing.T) {
 	if len(lusers.Data) != 10 {
 		t.Fatalf("expected entries does not match %d\n", len(lusers.Data))
 	}
+	if lusers.Links.Self != lusers.Links.First {
+		t.Fatalf("self should match with first link %s", lusers.Links.First)
+	}
 	if m, _ := regexp.MatchString("pagenum=1&pagesize=10", lusers.Links.Self); !m {
-		t.Fatalf("expected link %s does not contain include query parameter", lusers.Links.Self)
+		t.Fatalf("expected self link does not match %s", lusers.Links.Self)
+	}
+	if m, _ := regexp.MatchString("pagenum=2&pagesize=10", lusers.Links.Next); !m {
+		t.Fatalf("expected next link does not match %s", lusers.Links.Next)
+	}
+	if m, _ := regexp.MatchString("pagenum=3&pagesize=10", lusers.Links.Last); !m {
+		t.Fatalf("expected last link does not match %s", lusers.Links.Last)
 	}
 	for _, user := range lusers.Data {
 		if user.Id < 1 {
@@ -332,6 +341,12 @@ func TestGetAllUsers(t *testing.T) {
 	}
 	if m, _ := regexp.MatchString("pagenum=3&pagesize=10", tusers.Links.Self); !m {
 		t.Fatalf("expected link %s does not contain include query parameter", tusers.Links.Self)
+	}
+	if m, _ := regexp.MatchString("pagenum=1&pagesize=10", tusers.Links.First); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", tusers.Links.First)
+	}
+	if m, _ := regexp.MatchString("pagenum=2&pagesize=10", tusers.Links.Prev); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", tusers.Links.Prev)
 	}
 	tpage := tusers.Meta.Pagination
 	if tpage.Number != 3 {
@@ -366,6 +381,12 @@ func TestGetAllUsers(t *testing.T) {
 	if m, _ := regexp.MatchString("pagenum=2&pagesize=5", ausers.Links.Self); !m {
 		t.Fatalf("expected link %s does not contain include query parameter", ausers.Links.Self)
 	}
+	if m, _ := regexp.MatchString("pagenum=3&pagesize=5", ausers.Links.Next); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", ausers.Links.Next)
+	}
+	if m, _ := regexp.MatchString("pagenum=6&pagesize=5", ausers.Links.Last); !m {
+		t.Fatalf("expected link %s does not contain include query parameter", ausers.Links.Last)
+	}
 	apage := ausers.Meta.Pagination
 	if apage.Number != 2 {
 		t.Logf("expected page number does not match %d\n", apage.Number)
@@ -375,5 +396,12 @@ func TestGetAllUsers(t *testing.T) {
 	}
 	if apage.Total != 6 {
 		t.Logf("expected no of pages does not match %d\n", apage.Total)
+	}
+	musers, err := client.ListUsers(context.Background(), &jsonapi.ListRequest{Pagesize: 5, Pagenum: 6})
+	if err != nil {
+		t.Fatalf("could not fetch all users %s\n", err)
+	}
+	if len(musers.Data) != 3 {
+		t.Fatalf("expected entries does not match %d\n", len(musers.Data))
 	}
 }
