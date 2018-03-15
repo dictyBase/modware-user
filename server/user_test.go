@@ -288,7 +288,7 @@ func TestGetAllUsers(t *testing.T) {
 			NewUser(fmt.Sprintf("%s@seinfeld.com", RandString(10))),
 		)
 		if err != nil {
-			t.Fatalf("could not store the role %s\n", err)
+			t.Fatalf("could not store the user %s\n", err)
 		}
 	}
 	lusers, err := client.ListUsers(context.Background(), &jsonapi.ListRequest{})
@@ -403,5 +403,62 @@ func TestGetAllUsers(t *testing.T) {
 	}
 	if len(musers.Data) != 3 {
 		t.Fatalf("expected entries does not match %d\n", len(musers.Data))
+	}
+}
+
+func TestGetAllUsersWithFilter(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewUserServiceClient(conn)
+	for i := 0; i < 20; i++ {
+		_, err := client.CreateUser(
+			context.Background(),
+			NewUser(fmt.Sprintf("%s@seinfeld.com", RandString(10))),
+		)
+		if err != nil {
+			t.Fatalf("could not store the user %s\n", err)
+		}
+	}
+	for i := 0; i < 20; i++ {
+		_, err := client.CreateUser(
+			context.Background(),
+			NewUser(fmt.Sprintf("%s@kramer.com", RandString(10))),
+		)
+		if err != nil {
+			t.Fatalf("could not store the user %s\n", err)
+		}
+	}
+	fusers, err := client.ListUsers(
+		context.Background(),
+		&jsonapi.ListRequest{
+			Pagesize: 5,
+			Filter:   "email=@kramer",
+		})
+	if err != nil {
+		t.Fatalf("could not fetch all users %s\n", err)
+	}
+	if len(fusers.Data) != 5 {
+		t.Fatalf("expected 5, retrieved %d\n", len(fusers.Data))
+	}
+	if m, _ := regexp.MatchString("pagenum=4&pagesize=5", fusers.Links.Last); !m {
+		t.Fatalf("expected last link does not match %s", fusers.Links.Last)
+	}
+	page := fusers.Meta.Pagination
+	if page.Records != 20 {
+		t.Logf("expected total no of records does not match %d\n", page.Records)
+	}
+	if page.Size != 5 {
+		t.Logf("expected page size does not match %d\n", page.Size)
+	}
+	if page.Number != 1 {
+		t.Logf("expected page number does not match %d\n", page.Number)
+	}
+	if page.Total != 4 {
+		t.Logf("expected no of pages does not match %d\n", page.Total)
 	}
 }

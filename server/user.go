@@ -225,7 +225,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			s.FieldsStr = r.Fields
 			s.FilterStr = r.Filter
 			s.IncludeStr = r.Include
-			count, err := s.GetAllFilteredCount(usrTablesJoin)
+			count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -251,7 +251,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasFields && params.HasFilter:
 			s.FieldsStr = r.Fields
 			s.FilterStr = r.Filter
-			count, err := s.GetAllFilteredCount(usrTablesJoin)
+			count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -264,7 +264,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		case params.HasInclude && params.HasFilter:
 			s.IncludeStr = r.Include
 			s.FilterStr = r.Filter
-			count, err := s.GetAllFilteredCount(usrTablesJoin)
+			count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -325,7 +325,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		s.FieldsStr = r.Fields
 		s.FilterStr = r.Filter
 		s.IncludeStr = r.Include
-		count, err := s.GetAllFilteredCount(usrTablesJoin)
+		count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -340,7 +340,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	case params.HasFields && params.HasFilter:
 		s.FieldsStr = r.Fields
 		s.FilterStr = r.Filter
-		count, err := s.GetAllFilteredCount(usrTablesJoin)
+		count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -370,7 +370,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	case params.HasFilter && params.HasInclude:
 		s.IncludeStr = r.Include
 		s.FilterStr = r.Filter
-		count, err := s.GetAllFilteredCount(usrTablesJoin)
+		count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -398,7 +398,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFilter:
 		s.FilterStr = r.Filter
-		count, err := s.GetAllFilteredCount(usrTablesJoin)
+		count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -425,7 +425,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		}
 		return s.dbToCollResource(dbUsers), nil
 	default:
-		count, err := s.GetCount("auth_user")
+		count, err := s.GetCount(userDbTable)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
