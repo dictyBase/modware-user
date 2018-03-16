@@ -120,8 +120,14 @@ func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.Relationsh
 	// 2. Has pagination query paramters
 	var pagenum, pagesize int64
 	if aphgrpc.HasRelatedPagination(r) {
-		pagenum = r.Pagenum
-		pagesize = r.Pagesize
+		if r.Pagenum == 0 {
+			pagenum = aphgrpc.DefaultPagenum
+		} else if r.Pagesize == 0 {
+			pagesize = aphgrpc.DefaultPagesize
+		} else {
+			pagenum = r.Pagenum
+			pagesize = r.Pagesize
+		}
 		// 3. Without any pagination parameters(use default page parameters)
 	} else {
 		pagenum = aphgrpc.DefaultPagenum
@@ -623,10 +629,10 @@ func (s *RoleService) getRelatedUsersCount(id int64) (int64, error) {
 	var count int64
 	err := s.Dbh.Select("COUNT(*)").From(`
 		auth_user_role
-		JOIN auth_user user
-		ON auth_user_role.auth_user_id = user.auth_user_id
-		JOIN auth_user_info uinfo
-		ON uinfo.auth_user_id = user.auth_user_id
+		JOIN auth_user
+		ON auth_user_role.auth_user_id = auth_user.auth_user_id
+		JOIN auth_user_info
+		ON auth_user_info.auth_user_id = auth_user.auth_user_id
 		`).Where("auth_user_role.auth_role_id = $1", id).QueryScalar(&count)
 	return count, err
 }
@@ -654,15 +660,24 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 func (s *RoleService) getUserResourceDataWithPagination(id, pagenum, pagesize int64) ([]*user.UserData, error) {
 	var dbrows []*dbUser
 	var udata []*user.UserData
-	err := s.Dbh.Select("user.*", "uinfo.*").From(`
-		auth_user_role
-		JOIN auth_user user
-		ON auth_user_role.auth_user_id = user.auth_user_id
-		JOIN auth_user_info uinfo
-		ON uinfo.auth_user_id = user.auth_user_id
-	`).Where("auth_user_role.auth_role_id = $1", id).
-		Paginate(uint64(pagenum), uint64(pagesize)).
-		QueryStructs(&dbrows)
+	err := s.Dbh.SQL(
+		fmt.Sprintf(
+			"%s LIMIT %d OFFSET %d",
+			`SELECT auth_user.auth_user_id,
+				CAST(auth_user.email AS TEXT),
+				auth_user.first_name,
+				auth_user.last_name,
+				auth_user.is_active,
+				auth_user_info.*
+				FROM auth_user_role
+				JOIN auth_user
+				ON auth_user_role.auth_user_id = auth_user.auth_user_id
+				JOIN auth_user_info
+				ON auth_user_info.auth_user_id = auth_user.auth_user_id
+				WHERE auth_user_role.auth_role_id = $1`,
+			pagesize,
+			(pagenum-1)*pagesize,
+		), id).QueryStructs(&dbrows)
 	if err != nil {
 		return udata, err
 	}
