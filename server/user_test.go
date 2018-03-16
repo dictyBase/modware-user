@@ -584,3 +584,66 @@ func TestGetRelatedRoles(t *testing.T) {
 		t.Fatalf("expected relationships link does not match %s", nrole.Links.Self)
 	}
 }
+
+func TestUpdateRelatedRoles(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	roleClient := pb.NewRoleServiceClient(conn)
+	role, err := roleClient.CreateRole(context.Background(), NewRole("fetcher"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	client := pb.NewUserServiceClient(conn)
+	nuser, err := client.CreateUser(context.Background(), NewUserWithRole("bobsacamano@seinfeld.org", role))
+	if err != nil {
+		t.Fatalf("could not store the user %s\n", err)
+	}
+	urole, err := roleClient.CreateRole(context.Background(), NewRole("updater"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	_, err = client.UpdateRoleRelationship(
+		context.Background(),
+		&jsonapi.DataCollection{
+			Id: nuser.Data.Id,
+			Data: []*jsonapi.Data{
+				&jsonapi.Data{
+					Type: "roles",
+					Id:   urole.Data.Id,
+				},
+			},
+		})
+	if err != nil {
+		t.Fatalf("could not update the relationship with role %s\n", err)
+	}
+	guser, err := client.GetUser(
+		context.Background(),
+		&jsonapi.GetRequest{
+			Id:      nuser.Data.Id,
+			Include: "roles",
+		})
+	if err != nil {
+		t.Fatalf("could not fetch the user %s\n", err)
+	}
+	for _, a := range guser.Included {
+		roleData := &pb.RoleData{}
+		if err := ptypes.UnmarshalAny(a, roleData); err != nil {
+			t.Fatalf("error in unmarshaling any types %s\n", err)
+		} else {
+			if roleData.Id != urole.Data.Id {
+				t.Fatalf("expected id does not match with %s\n", roleData.Id)
+			}
+			if roleData.Links.Self != urole.Links.Self {
+				t.Fatalf("expected link does not match with %s\n", roleData.Links.Self)
+			}
+			if roleData.Attributes.Role != urole.Data.Attributes.Role {
+				t.Fatalf("expected permission does not match with %s\n", roleData.Attributes.Role)
+			}
+		}
+	}
+}
