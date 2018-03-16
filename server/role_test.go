@@ -47,6 +47,49 @@ func NewRole(role string) *pb.CreateRoleRequest {
 	}
 }
 
+func NewRoleWithMultiUsers(role string, allUsers []*pb.User) *pb.CreateRoleRequest {
+	var allData []*jsonapi.Data
+	for _, u := range allUsers {
+		allData = append(
+			allData,
+			&jsonapi.Data{Id: u.Data.Id, Type: u.Data.Type},
+		)
+	}
+	return &pb.CreateRoleRequest{
+		Data: &pb.CreateRoleRequest_Data{
+			Type: "roles",
+			Attributes: &pb.RoleAttributes{
+				Role:        role,
+				Description: fmt.Sprintf("Ability to do %s", role),
+			},
+			Relationships: &pb.NewRoleRelationships{
+				Users: &pb.NewRoleRelationships_Users{
+					Data: allData,
+				},
+			},
+		},
+	}
+}
+
+func NewRoleWithUser(role string, user *pb.User) *pb.CreateRoleRequest {
+	return &pb.CreateRoleRequest{
+		Data: &pb.CreateRoleRequest_Data{
+			Type: "roles",
+			Attributes: &pb.RoleAttributes{
+				Role:        role,
+				Description: fmt.Sprintf("Ability to do %s", role),
+			},
+			Relationships: &pb.NewRoleRelationships{
+				Users: &pb.NewRoleRelationships_Users{
+					Data: []*jsonapi.Data{
+						&jsonapi.Data{Id: user.Data.Id, Type: user.Data.Type},
+					},
+				},
+			},
+		},
+	}
+}
+
 func NewRoleWithPermission(role string, perm *pb.Permission) *pb.CreateRoleRequest {
 	return &pb.CreateRoleRequest{
 		Data: &pb.CreateRoleRequest_Data{
@@ -653,5 +696,101 @@ func TestRoleGetPermissionRelationship(t *testing.T) {
 	}
 	if nperm.Links.Self != nrole.Data.Relationships.Permissions.Links.Related {
 		t.Fatalf("expected relationships link does not match %s", nrole.Data.Relationships.Permissions.Links.Related)
+	}
+}
+
+func TestGetRelatedUsers(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	userClient := pb.NewUserServiceClient(conn)
+	var allUsers []*pb.User
+	for i := 0; i < 40; i++ {
+		u, err := userClient.CreateUser(
+			context.Background(),
+			NewUser(fmt.Sprintf("%s@kramer.com", RandString(10))),
+		)
+		if err != nil {
+			t.Fatalf("could not store the user %s\n", err)
+		}
+		allUsers = append(allUsers, u)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRoleWithMultiUsers("genome-curator", allUsers))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	rusers, err := client.GetRelatedUsers(
+		context.Background(),
+		&jsonapi.RelationshipRequestWithPagination{
+			Id: nrole.Data.Id,
+		},
+	)
+	if err != nil {
+		t.Fatalf("could not get related users %s\n", err)
+	}
+	if len(rusers.Data) != 10 {
+		t.Fatalf("expected entries does not match %d\n", len(rusers.Data))
+	}
+	if rusers.Links.Self != rusers.Links.First {
+		t.Fatalf("self should match with first link %s", rusers.Links.First)
+	}
+	if m, _ := regexp.MatchString(`roles\/\d+\/users\?pagenum=2&pagesize=10`, rusers.Links.Next); !m {
+		t.Fatalf("expected next link does not match %s", rusers.Links.Next)
+	}
+	if m, _ := regexp.MatchString(`roles\/\d+\/users\?pagenum=4&pagesize=10`, rusers.Links.Last); !m {
+		t.Fatalf("expected last link does not match %s", rusers.Links.Last)
+	}
+	page := rusers.Meta.Pagination
+	if page.Records != 40 {
+		t.Logf("expected total no of records does not match %d\n", page.Records)
+	}
+	if page.Size != 10 {
+		t.Logf("expected page size does not match %d\n", page.Size)
+	}
+	if page.Number != 1 {
+		t.Logf("expected page number does not match %d\n", page.Number)
+	}
+	if page.Total != 4 {
+		t.Logf("expected no of pages does not match %d\n", page.Total)
+	}
+
+	musers, err := client.GetRelatedUsers(
+		context.Background(),
+		&jsonapi.RelationshipRequestWithPagination{
+			Id:       nrole.Data.Id,
+			Pagesize: 5,
+			Pagenum:  4,
+		},
+	)
+	if err != nil {
+		t.Fatalf("could not get related users %s\n", err)
+	}
+	if len(musers.Data) != 5 {
+		t.Fatalf("expected entries does not match %d\n", len(musers.Data))
+	}
+	if m, _ := regexp.MatchString(`roles\/\d+\/users\?pagenum=5&pagesize=5`, musers.Links.Next); !m {
+		t.Fatalf("expected next link does not match %s", musers.Links.Next)
+	}
+	if m, _ := regexp.MatchString(`roles\/\d+\/users\?pagenum=8&pagesize=5`, musers.Links.Last); !m {
+		t.Fatalf("expected last link does not match %s", musers.Links.Last)
+	}
+	if m, _ := regexp.MatchString(`roles\/\d+\/users\?pagenum=3&pagesize=5`, musers.Links.Prev); !m {
+		t.Fatalf("expected last link does not match %s", musers.Links.Last)
+	}
+	mpage := musers.Meta.Pagination
+	if mpage.Size != 5 {
+		t.Logf("expected page size does not match %d\n", mpage.Size)
+	}
+	if mpage.Number != 4 {
+		t.Logf("expected page number does not match %d\n", mpage.Number)
+	}
+	if mpage.Total != 8 {
+		t.Logf("expected no of pages does not match %d\n", mpage.Total)
 	}
 }
