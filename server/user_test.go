@@ -214,6 +214,38 @@ func TestGetUser(t *testing.T) {
 	}
 }
 
+func TestGetUserByEmail(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewUserServiceClient(conn)
+	nuser, err := client.CreateUser(context.Background(), NewUser("timwhatley@seinfeld.org"))
+	if err != nil {
+		t.Fatalf("could not store the user %s\n", err)
+	}
+	guser, err := client.GetUserByEmail(context.Background(), &jsonapi.GetEmailRequest{Email: "timwhatley@seinfeld.org"})
+	if err != nil {
+		t.Fatalf("could not fetch the user %s\n", err)
+	}
+	if guser.Data.Id != nuser.Data.Id {
+		t.Fatalf("expected id %d does not match %d\n", nuser.Data.Id, guser.Data.Id)
+	}
+	if guser.Data.Attributes.Email != "timwhatley@seinfeld.org" {
+		t.Fatalf("expected email %s does not match %s\n", guser.Data.Attributes.Email, "timwhatley@seinfeld.org")
+	}
+	if guser.Data.Attributes.Country != "US" {
+		t.Fatalf("expected country name does not match %s\n", guser.Data.Attributes.Country)
+	}
+	_, err = client.GetUserByEmail(context.Background(), &jsonapi.GetEmailRequest{Email: "jerry@seinfeld.org"})
+	if err == nil {
+		t.Fatal("expected error did not occur from non-existing email id")
+	}
+}
+
 func TestGetUserWithRole(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())

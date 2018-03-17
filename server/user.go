@@ -664,7 +664,7 @@ func (s *UserService) DeleteRoleRelationship(ctx context.Context, r *jsonapi.Dat
 func (s *UserService) emailToResourceId(email string) (int64, error) {
 	var id int64
 	err := s.Dbh.Select("auth_user_id").From(userDbTable).
-		Where("email = $1").QueryScalar(&id)
+		Where("email = $1", email).QueryScalar(&id)
 	return id, err
 }
 
