@@ -30,7 +30,7 @@
     "dictybaseapis/api/jsonapi",
     "dictybaseapis/user"
   ]
-  revision = "d204df4dc49ac656d7281d0547bdde26eb145c97"
+  revision = "ca4c8e9724a1273d7b7fe2bbb98f3623f0e2a4b6"
 
 [[projects]]
   name = "github.com/docker/distribution"

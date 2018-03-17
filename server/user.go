@@ -140,6 +140,23 @@ func NewUserService(dbh *runner.DB, pathPrefix string) *UserService {
 	}
 }
 
+func (s *UserService) GetUserByEmail(ctx context.Context, r *jsonapi.GetEmailRequest) (*user.User, error) {
+	id, err := s.emailToResourceId(r.Email)
+	if err != nil {
+		return &user.User{}, aphgrpc.HandleError(ctx, err)
+	}
+	if id == 0 { // user with that email does not exist
+		return &user.User{}, status.Error(codes.NotFound, fmt.Sprintf("email %s not found", r.Email))
+	}
+	return s.GetUser(
+		ctx,
+		&jsonapi.GetRequest{
+			Id:      id,
+			Include: r.Include,
+			Fields:  r.Fields,
+		})
+}
+
 func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user.User, error) {
 	params, md, err := aphgrpc.ValidateAndParseGetParams(s, r)
 	if err != nil {
@@ -643,6 +660,13 @@ func (s *UserService) DeleteRoleRelationship(ctx context.Context, r *jsonapi.Dat
 }
 
 // All helper functions
+
+func (s *UserService) emailToResourceId(email string) (int64, error) {
+	var id int64
+	err := s.Dbh.Select("auth_user_id").From(userDbTable).
+		Where("email = $1").QueryScalar(&id)
+	return id, err
+}
 
 func (s *UserService) existsResource(id int64) (bool, error) {
 	r, err := s.Dbh.Select("auth_user_id").From("auth_user").
