@@ -140,6 +140,11 @@ func NewUserService(dbh *runner.DB, pathPrefix string) *UserService {
 	}
 }
 
+func (s *UserService) ExistUser(ctx context.Context, r *jsonapi.IdRequest) (*jsonapi.ExistResponse, error) {
+	found, err := s.existsResource(r.Id)
+	return &jsonapi.ExistResponse{Exist: found}, err
+}
+
 func (s *UserService) GetUserByEmail(ctx context.Context, r *jsonapi.GetEmailRequest) (*user.User, error) {
 	id, err := s.emailToResourceId(r.Email)
 	if err != nil {

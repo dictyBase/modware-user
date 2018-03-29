@@ -28,9 +28,10 @@
   name = "github.com/dictyBase/go-genproto"
   packages = [
     "dictybaseapis/api/jsonapi",
+    "dictybaseapis/pubsub",
     "dictybaseapis/user"
   ]
-  revision = "ca4c8e9724a1273d7b7fe2bbb98f3623f0e2a4b6"
+  revision = "416bc36dfc3c69dd6c8ef3d05db7a32dbdc53fb3"
 
 [[projects]]
   name = "github.com/docker/distribution"
@@ -472,6 +473,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bd430da7dbf42d91aa14619700fc7079250fbb69ac7e3bf001cf383730164904"
+  inputs-digest = "352572f67defbd90b5af9c0a3fb7b7d39524c7995682473fedd2668228f45c7f"
   solver-name = "gps-cdcl"
   solver-version = 1
