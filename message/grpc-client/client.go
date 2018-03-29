@@ -24,7 +24,7 @@ func (g *grpcUserClient) Get(id int64) (*user.User, error) {
 }
 
 func (g *grpcUserClient) Delete(id int64) (bool, error) {
-	_, err = g.client.DeleteUser(context.Background(), &jsonapi.DeleteRequest{Id: id})
+	_, err := g.client.DeleteUser(context.Background(), &jsonapi.DeleteRequest{Id: id})
 	if err != nil {
 		return false, err
 	}
