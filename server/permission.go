@@ -82,7 +82,6 @@ func (s *PermissionService) GetPermission(ctx context.Context, r *jsonapi.GetReq
 	}
 	s.Params = params
 	s.ListMethod = false
-	s.SetBaseURL(ctx)
 	switch {
 	case params.HasFields:
 		s.FieldsStr = r.Fields
@@ -108,7 +107,6 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.Simp
 	}
 	s.Params = params
 	s.ListMethod = true
-	s.SetBaseURL(ctx)
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter:
@@ -158,7 +156,6 @@ func (s *PermissionService) CreatePermission(ctx context.Context, r *user.Create
 			return &user.Permission{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	s.SetBaseURL(ctx)
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
 	return s.buildResource(
 		aphgrpc.NullToInt64(newdbPerm.AuthPermissionId),
@@ -185,7 +182,6 @@ func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.Update
 			return &user.Permission{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	s.SetBaseURL(ctx)
 	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
 }
 

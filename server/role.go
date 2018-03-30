@@ -76,7 +76,6 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 	s.Params = params
 	s.ListMethod = false
-	s.SetBaseURL(ctx)
 	switch {
 	case params.HasFields && params.HasInclude:
 		s.IncludeStr = r.Include
@@ -144,7 +143,6 @@ func (s *RoleService) GetRelatedUsers(ctx context.Context, r *jsonapi.Relationsh
 	if err != nil {
 		return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 	}
-	s.SetBaseURL(ctx)
 	pageLinks, pages := s.GetRelatedPagination(r.Id, count, pagenum, pagesize, "users")
 	return &user.UserCollection{
 		Data:  udata,
@@ -181,7 +179,6 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.SimpleListReques
 	}
 	s.Params = params
 	s.ListMethod = true
-	s.SetBaseURL(ctx)
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter && params.HasInclude:
@@ -303,7 +300,6 @@ func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest)
 			}
 		}
 	}
-	s.SetBaseURL(ctx)
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
 	return s.buildResource(roleId, s.dbToResourceAttributes(dbrole)), nil
 }
@@ -419,7 +415,6 @@ func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest)
 			}
 		}
 	}
-	s.SetBaseURL(ctx)
 	return s.buildResource(dbrole.AuthRoleId, s.dbToResourceAttributes(dbrole)), nil
 }
 

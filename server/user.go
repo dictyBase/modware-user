@@ -177,7 +177,6 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 	}
 	s.Params = params
 	s.ListMethod = false
-	s.SetBaseURL(ctx)
 	switch {
 	case params.HasFields && params.HasInclude:
 		s.IncludeStr = r.Include
@@ -239,7 +238,6 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 	}
 	s.Params = params
 	s.ListMethod = true
-	s.SetBaseURL(ctx)
 	// has pagination query parameters
 	if aphgrpc.HasPagination(r) {
 		if r.Pagenum == 0 {
@@ -509,7 +507,6 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 			}
 		}
 	}
-	s.SetBaseURL(ctx)
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
 	return s.buildResource(
 		dbcuser.AuthUserId,
@@ -598,7 +595,6 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 			}
 		}
 	}
-	s.SetBaseURL(ctx)
 	return s.buildResource(
 		r.Data.Id,
 		s.dbToResourceAttributes(s.mergeTodbUser(dbcuser, dbusrInfo)),
