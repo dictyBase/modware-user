@@ -29,9 +29,9 @@ func RunServer(c *cli.Context) error {
 		)
 	}
 	grpcS := grpc.NewServer()
-	pb.RegisterUserServiceServer(grpcS, server.NewUserService(dbh, "users"))
-	pb.RegisterRoleServiceServer(grpcS, server.NewRoleService(dbh, "roles"))
-	pb.RegisterPermissionServiceServer(grpcS, server.NewPermissionService(dbh, "permissions"))
+	pb.RegisterUserServiceServer(grpcS, server.NewUserService(dbh))
+	pb.RegisterRoleServiceServer(grpcS, server.NewRoleService(dbh))
+	pb.RegisterPermissionServiceServer(grpcS, server.NewPermissionService(dbh))
 	reflection.Register(grpcS)
 
 	// http requests muxer

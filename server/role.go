@@ -623,7 +623,6 @@ func (s *RoleService) getPermissionResourceData(id int64) ([]*user.PermissionDat
 	}
 	return NewPermissionService(
 		s.Dbh,
-		"permissions",
 	).dbToCollResourceData(dbrows), nil
 }
 
@@ -655,7 +654,6 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 	}
 	return NewUserService(
 		s.Dbh,
-		"users",
 	).dbToCollResourceData(dbrows), nil
 }
 
@@ -685,7 +683,6 @@ func (s *RoleService) getUserResourceDataWithPagination(id, pagenum, pagesize in
 	}
 	return NewUserService(
 		s.Dbh,
-		"users",
 	).dbToCollResourceData(dbrows), nil
 }
 
@@ -755,7 +752,7 @@ func (s *RoleService) buildResourceRelationships(id int64, role *user.Role) erro
 				return err
 			}
 			// included relationships
-			incUsers, err := NewUserService(s.Dbh, "users").convertAllToAny(users)
+			incUsers, err := NewUserService(s.Dbh).convertAllToAny(users)
 			if err != nil {
 				return err
 			}
@@ -766,7 +763,7 @@ func (s *RoleService) buildResourceRelationships(id int64, role *user.Role) erro
 			if err != nil {
 				return err
 			}
-			incPerms, err := NewPermissionService(s.Dbh, "permissions").convertAllToAny(perms)
+			incPerms, err := NewPermissionService(s.Dbh).convertAllToAny(perms)
 			if err != nil {
 				return err
 			}
@@ -820,7 +817,7 @@ func (s *RoleService) dbToCollResourceWithRel(dbrows []*dbRole) (*user.RoleColle
 				rdata[i].Relationships.Users.Data = s.buildUserResourceIdentifiers(u)
 				users = append(users, u...)
 			}
-			incUsers, err := NewUserService(s.Dbh, "users").convertAllToAny(users)
+			incUsers, err := NewUserService(s.Dbh).convertAllToAny(users)
 			if err != nil {
 				return &user.RoleCollection{}, err
 			}
@@ -835,7 +832,7 @@ func (s *RoleService) dbToCollResourceWithRel(dbrows []*dbRole) (*user.RoleColle
 				rdata[i].Relationships.Permissions.Data = s.buildPermissionResourceIdentifiers(p)
 				perms = append(perms, p...)
 			}
-			incPerms, err := NewPermissionService(s.Dbh, "permissions").convertAllToAny(perms)
+			incPerms, err := NewPermissionService(s.Dbh).convertAllToAny(perms)
 			if err != nil {
 				return &user.RoleCollection{}, err
 			}

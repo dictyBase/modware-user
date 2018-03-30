@@ -28,9 +28,9 @@ const (
 func runGRPCServer(db *sql.DB) {
 	dbh := runner.NewDB(db, "postgres")
 	grpcS := grpc.NewServer()
-	pb.RegisterPermissionServiceServer(grpcS, NewPermissionService(dbh, "permissions"))
-	pb.RegisterRoleServiceServer(grpcS, NewRoleService(dbh, "roles"))
-	pb.RegisterUserServiceServer(grpcS, NewUserService(dbh, "users"))
+	pb.RegisterPermissionServiceServer(grpcS, NewPermissionService(dbh))
+	pb.RegisterRoleServiceServer(grpcS, NewRoleService(dbh))
+	pb.RegisterUserServiceServer(grpcS, NewUserService(dbh))
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		panic(err)

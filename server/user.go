@@ -804,7 +804,7 @@ func (s *UserService) getRoleResourceData(id int64) ([]*user.RoleData, error) {
 	if err != nil {
 		return rdata, err
 	}
-	return NewRoleService(s.Dbh, "roles").dbToCollResourceData(drole), nil
+	return NewRoleService(s.Dbh).dbToCollResourceData(drole), nil
 }
 
 func (s *UserService) buildRoleResourceIdentifiers(roles []*user.RoleData) []*jsonapi.Data {
@@ -854,7 +854,7 @@ func (s *UserService) buildResourceRelationships(id int64, user *user.User) erro
 	if err != nil {
 		return err
 	}
-	incRoles, err := NewRoleService(s.Dbh, "roles").convertAllToAny(roles)
+	incRoles, err := NewRoleService(s.Dbh).convertAllToAny(roles)
 	if err != nil {
 		return err
 	}
@@ -933,7 +933,7 @@ func (s *UserService) dbToCollResourceWithRelAndPagination(count int64, dbUsers 
 		udata[i].Relationships.Roles.Data = s.buildRoleResourceIdentifiers(roles)
 		allRoles = append(allRoles, roles...)
 	}
-	incRoles, err := NewRoleService(s.Dbh, "roles").convertAllToAny(allRoles)
+	incRoles, err := NewRoleService(s.Dbh).convertAllToAny(allRoles)
 	if err != nil {
 		return &user.UserCollection{}, err
 	}
