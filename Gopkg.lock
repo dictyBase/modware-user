@@ -21,7 +21,7 @@
     "aphdocker",
     "aphgrpc"
   ]
-  revision = "95269ae28f0651d6a50add4dac6e5f6bc20796d0"
+  revision = "5def2431f184949272d4aea582cf26d35a6869f2"
 
 [[projects]]
   branch = "master"
@@ -31,7 +31,7 @@
     "dictybaseapis/pubsub",
     "dictybaseapis/user"
   ]
-  revision = "416bc36dfc3c69dd6c8ef3d05db7a32dbdc53fb3"
+  revision = "874f7f8751bbd75f9985994848af37bb53d6f8dc"
 
 [[projects]]
   name = "github.com/docker/distribution"
@@ -216,6 +216,23 @@
   name = "github.com/mwitkow/go-proto-validators"
   packages = ["."]
   revision = "a55ca57f374a8846924b030f534d8b8211508cf0"
+
+[[projects]]
+  name = "github.com/nats-io/go-nats"
+  packages = [
+    ".",
+    "encoders/builtin",
+    "encoders/protobuf",
+    "util"
+  ]
+  revision = "062418ea1c2181f52dc0f954f6204370519a868b"
+  version = "v1.5.0"
+
+[[projects]]
+  name = "github.com/nats-io/nuid"
+  packages = ["."]
+  revision = "289cccf02c178dc782430d534e3c1f5b72af807f"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/pelletier/go-buffruneio"
@@ -473,6 +490,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "352572f67defbd90b5af9c0a3fb7b7d39524c7995682473fedd2668228f45c7f"
+  inputs-digest = "5d08269a408e14c450be5bc9439c5dea1dc75fc6d6e18533141b8fc3319040d7"
   solver-name = "gps-cdcl"
   solver-version = 1

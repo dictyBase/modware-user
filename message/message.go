@@ -11,9 +11,10 @@ type UserClient interface {
 	Exist(int64) (bool, error)
 }
 
+type ReplyFn func(string, UserClient, *pubsub.IdRequest) *pubsub.UserReply
+
 type Reply interface {
-	PublishAction(string, pubsub.Reply)
-	PublishUser(string, *user.User)
-	Start(string, *UserClient) error
+	Publish(string, *pubsub.UserReply)
+	Start(string, UserClient, ReplyFn) error
 	Stop() error
 }
