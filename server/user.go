@@ -106,10 +106,10 @@ type UserService struct {
 	*aphgrpc.Service
 }
 
-func defaultOptions() *aphgrpc.ServiceOptions {
+func userServiceOptions() *aphgrpc.ServiceOptions {
 	return &aphgrpc.ServiceOptions{
 		Resource:   "users",
-		PathPrefix: pathPrefix,
+		PathPrefix: "users",
 		Include:    []string{"roles"},
 		FilToColumns: map[string]string{
 			"first_name": "auth_user.first_name",
@@ -138,7 +138,7 @@ func defaultOptions() *aphgrpc.ServiceOptions {
 }
 
 func NewUserService(dbh *runner.DB, opt ...aphgrpc.Option) *UserService {
-	so := defaultOptions()
+	so := userServiceOptions()
 	for _, optfn := range opt {
 		optfn(so)
 	}

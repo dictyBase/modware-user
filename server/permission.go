@@ -42,7 +42,7 @@ type PermissionService struct {
 	*aphgrpc.Service
 }
 
-func defaultOptions() *aphgrpc.ServiceOptions {
+func permissionServiceOptions() *aphgrpc.ServiceOptions {
 	return &aphgrpc.ServiceOptions{
 		Resource:   "permissions",
 		PathPrefix: "permissions",
@@ -61,7 +61,7 @@ func defaultOptions() *aphgrpc.ServiceOptions {
 }
 
 func NewPermissionService(dbh *runner.DB, opt ...aphgrpc.Option) *PermissionService {
-	so := defaultOptions()
+	so := permissionServiceOptions()
 	for _, optfn := range opt {
 		optfn(so)
 	}

@@ -39,7 +39,7 @@ type RoleService struct {
 	*aphgrpc.Service
 }
 
-func defaultOptions() *aphgrpc.ServiceOptions {
+func roleServiceOptions() *aphgrpc.ServiceOptions {
 	return &aphgrpc.ServiceOptions{
 		Resource:   "roles",
 		PathPrefix: "roles",
@@ -59,7 +59,7 @@ func defaultOptions() *aphgrpc.ServiceOptions {
 }
 
 func NewRoleService(dbh *runner.DB, opt ...aphgrpc.Option) *RoleService {
-	so := defaultOptions()
+	so := roleServiceOptions()
 	for _, optfn := range opt {
 		optfn(so)
 	}
