@@ -42,25 +42,32 @@ type PermissionService struct {
 	*aphgrpc.Service
 }
 
-func NewPermissionService(dbh *runner.DB, pathPrefix string) *PermissionService {
-	return &PermissionService{
-		&aphgrpc.Service{
-			Resource:   "permissions",
-			Dbh:        dbh,
-			PathPrefix: pathPrefix,
-			FilToColumns: map[string]string{
-				"permission":  fmt.Sprintf("%s.permission", permDbTable),
-				"description": fmt.Sprintf("%s.description", permDbTable),
-			},
-			FieldsToColumns: map[string]string{
-				"permission":  fmt.Sprintf("%s.permission", permDbTable),
-				"description": fmt.Sprintf("%s.description", permDbTable),
-				"created_at":  fmt.Sprintf("%s.created_at", permDbTable),
-				"updated_at":  fmt.Sprintf("%s.updated_at", permDbTable),
-			},
-			ReqAttrs: []string{"Permission"},
+func defaultOptions() *aphgrpc.ServiceOptions {
+	return &aphgrpc.ServiceOptions{
+		Resource:   "permissions",
+		PathPrefix: "permissions",
+		FilToColumns: map[string]string{
+			"permission":  fmt.Sprintf("%s.permission", permDbTable),
+			"description": fmt.Sprintf("%s.description", permDbTable),
 		},
+		FieldsToColumns: map[string]string{
+			"permission":  fmt.Sprintf("%s.permission", permDbTable),
+			"description": fmt.Sprintf("%s.description", permDbTable),
+			"created_at":  fmt.Sprintf("%s.created_at", permDbTable),
+			"updated_at":  fmt.Sprintf("%s.updated_at", permDbTable),
+		},
+		ReqAttrs: []string{"Permission"},
 	}
+}
+
+func NewPermissionService(dbh *runner.DB, opt ...aphgrpc.Option) *PermissionService {
+	so := defaultOptions()
+	for _, optfn := range opt {
+		optfn(so)
+	}
+	srv := &aphgrpc.Service{Dbh: dbh}
+	aphgrpc.AssignFieldsToStructs(so, srv)
+	return &PermissionService{srv}
 }
 
 func (s *PermissionService) GetPermission(ctx context.Context, r *jsonapi.GetRequestWithFields) (*user.Permission, error) {

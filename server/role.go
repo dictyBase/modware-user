@@ -39,26 +39,33 @@ type RoleService struct {
 	*aphgrpc.Service
 }
 
-func NewRoleService(dbh *runner.DB, pathPrefix string) *RoleService {
-	return &RoleService{
-		&aphgrpc.Service{
-			Resource:   "roles",
-			Dbh:        dbh,
-			PathPrefix: pathPrefix,
-			Include:    []string{"users", "permissions"},
-			FilToColumns: map[string]string{
-				"role":        "role.role",
-				"description": "role.description",
-			},
-			FieldsToColumns: map[string]string{
-				"role":        "role.role",
-				"description": "role.description",
-				"created_at":  "role.created_at",
-				"updated_at":  "role.updated_at",
-			},
-			ReqAttrs: []string{"Role"},
+func defaultOptions() *aphgrpc.ServiceOptions {
+	return &aphgrpc.ServiceOptions{
+		Resource:   "roles",
+		PathPrefix: "roles",
+		Include:    []string{"users", "permissions"},
+		FilToColumns: map[string]string{
+			"role":        "role.role",
+			"description": "role.description",
 		},
+		FieldsToColumns: map[string]string{
+			"role":        "role.role",
+			"description": "role.description",
+			"created_at":  "role.created_at",
+			"updated_at":  "role.updated_at",
+		},
+		ReqAttrs: []string{"Role"},
 	}
+}
+
+func NewRoleService(dbh *runner.DB, opt ...aphgrpc.Option) *RoleService {
+	so := defaultOptions()
+	for _, optfn := range opt {
+		optfn(so)
+	}
+	srv := &aphgrpc.Service{Dbh: dbh}
+	aphgrpc.AssignFieldsToStructs(so, srv)
+	return &RoleService{srv}
 }
 
 func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user.Role, error) {

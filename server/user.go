@@ -106,38 +106,45 @@ type UserService struct {
 	*aphgrpc.Service
 }
 
-func NewUserService(dbh *runner.DB, pathPrefix string) *UserService {
-	return &UserService{
-		&aphgrpc.Service{
-			Resource:   "users",
-			Dbh:        dbh,
-			PathPrefix: pathPrefix,
-			Include:    []string{"roles"},
-			FilToColumns: map[string]string{
-				"first_name": "auth_user.first_name",
-				"last_name":  "auth_user.last_name",
-				"email":      "auth_user.email",
-			},
-			FieldsToColumns: map[string]string{
-				"first_name":     "auth_user.first_name",
-				"last_name":      "auth_user.last_name",
-				"email":          "auth_user.email",
-				"created_at":     "auth_user.created_at",
-				"updated_at":     "auth_user.updated_at",
-				"organization":   "auth_user_info.organization",
-				"group_name":     "auth_user_info.group_name",
-				"first_address":  "auth_user_info.first_address",
-				"second_address": "auth_user_info.second_address",
-				"city":           "auth_user_info.city",
-				"state":          "auth_user_info.state",
-				"zipcode":        "auth_user_info.zipcode",
-				"country":        "auth_user_info.country",
-				"phone":          "auth_user_info.phone",
-				"is_active":      "auth_user_info.is_active",
-			},
-			ReqAttrs: []string{"FirstName", "LastName", "Email"},
+func defaultOptions() *aphgrpc.ServiceOptions {
+	return &aphgrpc.ServiceOptions{
+		Resource:   "users",
+		PathPrefix: pathPrefix,
+		Include:    []string{"roles"},
+		FilToColumns: map[string]string{
+			"first_name": "auth_user.first_name",
+			"last_name":  "auth_user.last_name",
+			"email":      "auth_user.email",
 		},
+		FieldsToColumns: map[string]string{
+			"first_name":     "auth_user.first_name",
+			"last_name":      "auth_user.last_name",
+			"email":          "auth_user.email",
+			"created_at":     "auth_user.created_at",
+			"updated_at":     "auth_user.updated_at",
+			"organization":   "auth_user_info.organization",
+			"group_name":     "auth_user_info.group_name",
+			"first_address":  "auth_user_info.first_address",
+			"second_address": "auth_user_info.second_address",
+			"city":           "auth_user_info.city",
+			"state":          "auth_user_info.state",
+			"zipcode":        "auth_user_info.zipcode",
+			"country":        "auth_user_info.country",
+			"phone":          "auth_user_info.phone",
+			"is_active":      "auth_user_info.is_active",
+		},
+		ReqAttrs: []string{"FirstName", "LastName", "Email"},
 	}
+}
+
+func NewUserService(dbh *runner.DB, opt ...aphgrpc.Option) *UserService {
+	so := defaultOptions()
+	for _, optfn := range opt {
+		optfn(so)
+	}
+	srv := &aphgrpc.Service{Dbh: dbh}
+	aphgrpc.AssignFieldsToStructs(so, srv)
+	return &UserService{srv}
 }
 
 func (s *UserService) ExistUser(ctx context.Context, r *jsonapi.IdRequest) (*jsonapi.ExistResponse, error) {
