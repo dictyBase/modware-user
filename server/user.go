@@ -175,13 +175,10 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		grpc.SetTrailer(ctx, md)
 		return new(user.User), status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.Params = params
-	s.ListMethod = false
+	gctx := aphgrpc.GetReqCtx(params, r)
 	switch {
 	case params.HasFields && params.HasInclude:
-		s.IncludeStr = r.Include
-		s.FieldsStr = r.Fields
-		u, err := s.getResourceWithSelectedAttr(r.Id)
+		u, err := s.getResourceWithSelectedAttr(gctx, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -191,15 +188,13 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		}
 		return u, nil
 	case params.HasFields:
-		s.FieldsStr = r.Fields
-		u, err := s.getResourceWithSelectedAttr(r.Id)
+		u, err := s.getResourceWithSelectedAttr(gctx, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
 		return u, nil
 	case params.HasInclude:
-		s.IncludeStr = r.Include
-		u, err := s.getResource(r.Id)
+		u, err := s.getResource(gctx, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -209,7 +204,7 @@ func (s *UserService) GetUser(ctx context.Context, r *jsonapi.GetRequest) (*user
 		}
 		return u, nil
 	default:
-		u, err := s.getResource(r.Id)
+		u, err := s.getResource(gctx, r.Id)
 		if err != nil {
 			return &user.User{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -225,7 +220,7 @@ func (s *UserService) GetRelatedRoles(ctx context.Context, r *jsonapi.Relationsh
 	return &user.RoleCollection{
 		Data: rdata,
 		Links: &jsonapi.Links{
-			Self: s.GenCollResourceRelSelfLink(r.Id, "roles"),
+			Self: s.GenCollResourceRelSelfLink(context.TODO(), r.Id, "roles"),
 		},
 	}, nil
 }
@@ -236,8 +231,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		grpc.SetTrailer(ctx, md)
 		return &user.UserCollection{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.Params = params
-	s.ListMethod = true
+	lctx := aphgrpc.ListReqCtx(params, r)
 	// has pagination query parameters
 	if aphgrpc.HasPagination(r) {
 		if r.Pagenum == 0 {
@@ -249,221 +243,198 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 		switch {
 		// filter, fields and include parameters
 		case params.HasFields && params.HasInclude && params.HasFilter:
-			s.FieldsStr = r.Fields
-			s.FilterStr = r.Filter
-			s.IncludeStr = r.Include
-			count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
+			count, err := s.GetAllFilteredCount(lctx, fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithRelAndPagination(lctx, count, dbUsers, r.Pagenum, r.Pagesize)
 		// fields and includes
 		case params.HasFields && params.HasInclude:
-			s.FieldsStr = r.Fields
-			s.IncludeStr = r.Include
-			count, err := s.GetCount(userDbTable)
+			count, err := s.GetCount(lctx, userDbTable)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithRelAndPagination(lctx, count, dbUsers, r.Pagenum, r.Pagesize)
 		// fields and filters
 		case params.HasFields && params.HasFilter:
-			s.FieldsStr = r.Fields
-			s.FilterStr = r.Filter
-			count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
+			count, err := s.GetAllFilteredCount(lctx, fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
+			return s.dbToCollResourceWithPagination(lctx, count, dbUsers, r.Pagenum, r.Pagesize), nil
 		// include and filter
 		case params.HasInclude && params.HasFilter:
-			s.IncludeStr = r.Include
-			s.FilterStr = r.Filter
-			count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
+			count, err := s.GetAllFilteredCount(lctx, fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllFilteredRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithRelAndPagination(lctx, count, dbUsers, r.Pagenum, r.Pagesize)
 		case params.HasFields:
-			s.FieldsStr = r.Fields
-			count, err := s.GetCount(userDbTable)
+			count, err := s.GetCount(lctx, userDbTable)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
+			return s.dbToCollResourceWithPagination(lctx, count, dbUsers, r.Pagenum, r.Pagesize), nil
 		case params.HasFilter:
-			s.FilterStr = r.Filter
-			count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
+			count, err := s.GetAllFilteredCount(lctx, fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllFilteredRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllFilteredRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
+			return s.dbToCollResourceWithPagination(lctx, count, dbUsers, r.Pagenum, r.Pagesize), nil
 		case params.HasInclude:
-			s.IncludeStr = r.Include
-			count, err := s.GetCount(userDbTable)
+			count, err := s.GetCount(lctx, userDbTable)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, r.Pagenum, r.Pagesize)
+			return s.dbToCollResourceWithRelAndPagination(lctx, count, dbUsers, r.Pagenum, r.Pagesize)
 		// only pagination
 		default:
-			count, err := s.GetCount(userDbTable)
+			count, err := s.GetCount(lctx, userDbTable)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedRowsWithPaging(r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllSelectedRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			return s.dbToCollResourceWithPagination(count, dbUsers, r.Pagenum, r.Pagesize), nil
+			return s.dbToCollResourceWithPagination(lctx, count, dbUsers, r.Pagenum, r.Pagesize), nil
 		}
 	}
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter && params.HasInclude:
-		s.FieldsStr = r.Fields
-		s.FilterStr = r.Filter
-		s.IncludeStr = r.Include
-		count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
+		count, err := s.GetAllFilteredCount(lctx, fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(lctx, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithRelAndPagination(lctx, count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFields && params.HasFilter:
-		s.FieldsStr = r.Fields
-		s.FilterStr = r.Filter
-		count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
+		count, err := s.GetAllFilteredCount(lctx, fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbUsers, err := s.getAllSelectedFilteredRowsWithPaging(lctx, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
+			return s.dbToCollResourceWithPagination(lctx, count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFields && params.HasInclude:
-		s.FieldsStr = r.Fields
-		s.IncludeStr = r.Include
-		count, err := s.GetCount("auth_user")
+		count, err := s.GetCount(lctx, "auth_user")
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbUsers, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbUsers, err := s.getAllSelectedRowsWithPaging(lctx, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithRelAndPagination(lctx, count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFilter && params.HasInclude:
-		s.IncludeStr = r.Include
-		s.FilterStr = r.Filter
-		count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
+		count, err := s.GetAllFilteredCount(lctx, fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbUsers, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbUsers, err := s.getAllFilteredRowsWithPaging(lctx, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithRelAndPagination(lctx, count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFields:
-		s.FieldsStr = r.Fields
-		count, err := s.GetCount(userDbTable)
+		count, err := s.GetCount(lctx, userDbTable)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbUsers, err := s.getAllSelectedRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbUsers, err := s.getAllSelectedRowsWithPaging(lctx, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
+			return s.dbToCollResourceWithPagination(lctx, count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
 		return s.dbToCollResource(dbUsers), nil
 	case params.HasFilter:
-		s.FilterStr = r.Filter
-		count, err := s.GetAllFilteredCount(fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
+		count, err := s.GetAllFilteredCount(lctx, fmt.Sprintf("%s %s", userDbTable, usrTablesJoin))
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbUsers, err := s.getAllFilteredRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbUsers, err := s.getAllFilteredRowsWithPaging(lctx, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
+			return s.dbToCollResourceWithPagination(lctx, count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
-		return s.dbToCollResource(dbUsers), nil
+		return s.dbToCollResource(lctx, dbUsers), nil
 	case params.HasInclude:
 		s.IncludeStr = r.Include
-		count, err := s.GetCount(userDbTable)
+		count, err := s.GetCount(lctx, userDbTable)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbUsers, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbUsers, err := s.getAllRowsWithPaging(lctx, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			return s.dbToCollResourceWithRelAndPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+			return s.dbToCollResourceWithRelAndPagination(lctx, count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		}
-		return s.dbToCollResource(dbUsers), nil
+		return s.dbToCollResource(lctx, dbUsers), nil
 	default:
-		count, err := s.GetCount(userDbTable)
+		count, err := s.GetCount(lctx, userDbTable)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		dbUsers, err := s.getAllRowsWithPaging(aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
+		dbUsers, err := s.getAllRowsWithPaging(lctx, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize)
 		if err != nil {
 			return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		if count > aphgrpc.DefaultPagesize {
-			return s.dbToCollResourceWithPagination(count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
+			return s.dbToCollResourceWithPagination(lctx, count, dbUsers, aphgrpc.DefaultPagenum, aphgrpc.DefaultPagesize), nil
 		}
-		return s.dbToCollResource(dbUsers), nil
+		return s.dbToCollResource(lctx, dbUsers), nil
 	}
 }
 
@@ -509,6 +480,7 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 	}
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
 	return s.buildResource(
+		context.TODO(),
 		dbcuser.AuthUserId,
 		s.dbToResourceAttributes(s.mergeTodbUser(dbcuser, dbusrInfo)),
 	), nil
@@ -596,6 +568,7 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 		}
 	}
 	return s.buildResource(
+		context.TODO(),
 		r.Data.Id,
 		s.dbToResourceAttributes(s.mergeTodbUser(dbcuser, dbusrInfo)),
 	), nil
@@ -690,22 +663,26 @@ func (s *UserService) existsResource(id int64) (bool, error) {
 
 // -- Functions that queries the storage and generates an user resource object
 
-func (s *UserService) getResourceWithSelectedAttr(id int64) (*user.User, error) {
+func (s *UserService) getResourceWithSelectedAttr(ctx context.Context, id int64) (*user.User, error) {
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return count, fmt.Errorf("no params object found in context")
+	}
 	dusr := new(dbUser)
 	err := s.Dbh.SQL(
 		fmt.Sprintf(
 			"SELECT %s FROM auth_user %s %s",
-			strings.Join(s.mapFieldsToColumnsWithCast(s.Params.Fields), ","),
+			strings.Join(s.mapFieldsToColumnsWithCast(params.Fields), ","),
 			usrTablesJoin,
 			"WHERE auth_user.auth_user_id = $1",
 		), id).QueryStruct(dusr)
 	if err != nil {
 		return &user.User{}, err
 	}
-	return s.buildResource(id, s.dbToResourceAttributes(dusr)), nil
+	return s.buildResource(ctx, id, s.dbToResourceAttributes(dusr)), nil
 }
 
-func (s *UserService) getResource(id int64) (*user.User, error) {
+func (s *UserService) getResource(ctx context.Context, id int64) (*user.User, error) {
 	dusr := new(dbUser)
 	err := s.Dbh.SQL(
 		fmt.Sprintf(
@@ -716,18 +693,18 @@ func (s *UserService) getResource(id int64) (*user.User, error) {
 	if err != nil {
 		return &user.User{}, err
 	}
-	return s.buildResource(id, s.dbToResourceAttributes(dusr)), nil
+	return s.buildResource(ctx, id, s.dbToResourceAttributes(dusr)), nil
 }
 
 // -- Functions that queries the storage and generates a database user object
 
-func (s *UserService) getAllRows() ([]*dbUser, error) {
+func (s *UserService) getAllRows(ctx context.Context) ([]*dbUser, error) {
 	var dusrRows []*dbUser
 	err := s.Dbh.SQL(usrTableStmt).QueryStructs(&dusrRows)
 	return dusrRows, err
 }
 
-func (s *UserService) getAllRowsWithPaging(pagenum int64, pagesize int64) ([]*dbUser, error) {
+func (s *UserService) getAllRowsWithPaging(ctx context.Context, pagenum int64, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
 	err := s.Dbh.SQL(
 		fmt.Sprintf(
@@ -740,7 +717,7 @@ func (s *UserService) getAllRowsWithPaging(pagenum int64, pagesize int64) ([]*db
 	return dusrRows, err
 }
 
-func (s *UserService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*dbUser, error) {
+func (s *UserService) getAllSelectedRowsWithPaging(ctx context.Context, pagenum, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
 	err := s.Dbh.SQL(
 		fmt.Sprintf(
@@ -754,17 +731,21 @@ func (s *UserService) getAllSelectedRowsWithPaging(pagenum, pagesize int64) ([]*
 	return dusrRows, err
 }
 
-func (s *UserService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbUser, error) {
+func (s *UserService) getAllFilteredRowsWithPaging(ctx context.Context, pagenum, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return dusrRows, fmt.Errorf("no params object found in context")
+	}
 	var bindVals []string
-	for _, v := range aphgrpc.FilterToBindValue(s.Params.Filters) {
+	for _, v := range aphgrpc.FilterToBindValue(params.Filters) {
 		bindVals = append(bindVals, v.(string))
 	}
 	err := s.Dbh.SQL(
 		fmt.Sprintf(
 			"%s %s LIMIT %d OFFSET %d",
 			usrTableStmt,
-			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
+			aphgrpc.FilterToWhereClause(s, params.Filters),
 			pagesize,
 			(pagenum-1)*pagesize,
 		), strings.Join(bindVals, ","),
@@ -772,8 +753,12 @@ func (s *UserService) getAllFilteredRowsWithPaging(pagenum, pagesize int64) ([]*
 	return dusrRows, err
 }
 
-func (s *UserService) getAllSelectedFilteredRowsWithPaging(pagenum, pagesize int64) ([]*dbUser, error) {
+func (s *UserService) getAllSelectedFilteredRowsWithPaging(ctx context.Context, pagenum, pagesize int64) ([]*dbUser, error) {
 	var dusrRows []*dbUser
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return dusrRows, fmt.Errorf("no params object found in context")
+	}
 	var bindVals []string
 	for _, v := range aphgrpc.FilterToBindValue(s.Params.Filters) {
 		bindVals = append(bindVals, v.(string))
@@ -820,7 +805,7 @@ func (s *UserService) buildRoleResourceIdentifiers(roles []*user.RoleData) []*js
 
 // -- Functions that builds up the various parts of the final user resource objects
 
-func (s *UserService) buildResourceData(id int64, uattr *user.UserAttributes) *user.UserData {
+func (s *UserService) buildResourceData(ctx context.Context, id int64, uattr *user.UserAttributes) *user.UserData {
 	return &user.UserData{
 		Type:       s.GetResourceName(),
 		Id:         id,
@@ -834,16 +819,16 @@ func (s *UserService) buildResourceData(id int64, uattr *user.UserAttributes) *u
 			},
 		},
 		Links: &jsonapi.Links{
-			Self: s.GenResourceSelfLink(id),
+			Self: s.GenResourceSelfLink(ctx, id),
 		},
 	}
 }
 
-func (s *UserService) buildResource(id int64, uattr *user.UserAttributes) *user.User {
+func (s *UserService) buildResource(ctx context.Context, id int64, uattr *user.UserAttributes) *user.User {
 	return &user.User{
-		Data: s.buildResourceData(id, uattr),
+		Data: s.buildResourceData(ctx, id, uattr),
 		Links: &jsonapi.Links{
-			Self: s.GenResourceSelfLink(id),
+			Self: s.GenResourceSelfLink(ctx, id),
 		},
 	}
 }
@@ -887,27 +872,27 @@ func (s *UserService) dbToResourceAttributes(dusr *dbUser) *user.UserAttributes 
 	}
 }
 
-func (s *UserService) dbToCollResourceData(dbUsers []*dbUser) []*user.UserData {
+func (s *UserService) dbToCollResourceData(ctx context.Context, dbUsers []*dbUser) []*user.UserData {
 	var udata []*user.UserData
 	for _, dusr := range dbUsers {
-		udata = append(udata, s.buildResourceData(dusr.AuthUserId, s.dbToResourceAttributes(dusr)))
+		udata = append(udata, s.buildResourceData(ctx, dusr.AuthUserId, s.dbToResourceAttributes(dusr)))
 	}
 	return udata
 
 }
 
-func (s *UserService) dbToCollResource(dbUsers []*dbUser) *user.UserCollection {
+func (s *UserService) dbToCollResource(ctx context.Context, dbUsers []*dbUser) *user.UserCollection {
 	return &user.UserCollection{
-		Data: s.dbToCollResourceData(dbUsers),
+		Data: s.dbToCollResourceData(ctx, dbUsers),
 		Links: &jsonapi.PaginationLinks{
-			Self: s.GenCollResourceSelfLink(),
+			Self: s.GenCollResourceSelfLink(ctx),
 		},
 	}
 }
 
-func (s *UserService) dbToCollResourceWithPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) *user.UserCollection {
-	udata := s.dbToCollResourceData(dbUsers)
-	jsLinks, pages := s.GetPagination(count, pagenum, pagesize)
+func (s *UserService) dbToCollResourceWithPagination(ctx context.Context, count int64, dbUsers []*dbUser, pagenum, pagesize int64) *user.UserCollection {
+	udata := s.dbToCollResourceData(ctx, dbUsers)
+	jsLinks, pages := s.GetPagination(ctx, count, pagenum, pagesize)
 	return &user.UserCollection{
 		Data:  udata,
 		Links: jsLinks,
@@ -922,8 +907,8 @@ func (s *UserService) dbToCollResourceWithPagination(count int64, dbUsers []*dbU
 	}
 }
 
-func (s *UserService) dbToCollResourceWithRelAndPagination(count int64, dbUsers []*dbUser, pagenum, pagesize int64) (*user.UserCollection, error) {
-	udata := s.dbToCollResourceData(dbUsers)
+func (s *UserService) dbToCollResourceWithRelAndPagination(ctx context.Context, count int64, dbUsers []*dbUser, pagenum, pagesize int64) (*user.UserCollection, error) {
+	udata := s.dbToCollResourceData(ctx, dbUsers)
 	var allRoles []*user.RoleData
 	for i, _ := range udata {
 		roles, err := s.getRoleResourceData(dbUsers[i].AuthUserId)
@@ -937,7 +922,7 @@ func (s *UserService) dbToCollResourceWithRelAndPagination(count int64, dbUsers 
 	if err != nil {
 		return &user.UserCollection{}, err
 	}
-	jsLinks, pages := s.GetPagination(count, pagenum, pagesize)
+	jsLinks, pages := s.GetPagination(ctx, count, pagenum, pagesize)
 	return &user.UserCollection{
 		Data:     udata,
 		Links:    jsLinks,
