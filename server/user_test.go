@@ -296,7 +296,7 @@ func TestGetUserWithRole(t *testing.T) {
 				t.Fatalf("expected id does not match with %s\n", roleData.Id)
 			}
 			if roleData.Links.Self != nrole.Links.Self {
-				t.Fatalf("expected link does not match with %s\n", roleData.Links.Self)
+				t.Fatalf("expected link %s does not match with %s\n", nrole.Links.Self, roleData.Links.Self)
 			}
 			if roleData.Attributes.Role != nrole.Data.Attributes.Role {
 				t.Fatalf("expected permission does not match with %s\n", roleData.Attributes.Role)

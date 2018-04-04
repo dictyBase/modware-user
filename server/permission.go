@@ -80,18 +80,16 @@ func (s *PermissionService) GetPermission(ctx context.Context, r *jsonapi.GetReq
 		grpc.SetTrailer(ctx, md)
 		return &user.Permission{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.Params = params
-	s.ListMethod = false
+	gctx := aphgrpc.GetReqCtx(params, getReq)
 	switch {
 	case params.HasFields:
-		s.FieldsStr = r.Fields
-		perm, err := s.getResourceWithSelectedAttr(r.Id)
+		perm, err := s.getResourceWithSelectedAttr(gctx, r.Id)
 		if err != nil {
 			return &user.Permission{}, aphgrpc.HandleError(ctx, err)
 		}
 		return perm, nil
 	default:
-		perm, err := s.getResource(r.Id)
+		perm, err := s.getResource(gctx, r.Id)
 		if err != nil {
 			return &user.Permission{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -105,38 +103,39 @@ func (s *PermissionService) ListPermissions(ctx context.Context, r *jsonapi.Simp
 		grpc.SetTrailer(ctx, md)
 		return &user.PermissionCollection{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.Params = params
-	s.ListMethod = true
+	lctx := aphgrpc.ListReqCtx(
+		params,
+		&jsonapi.ListRequest{
+			Fields:  r.Fields,
+			Filter:  r.Filter,
+			Include: r.Include,
+		})
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter:
-		s.FieldsStr = r.Fields
-		s.FilterStr = r.Filter
-		dbrows, err := s.getAllSelectedFilteredRows()
+		dbrows, err := s.getAllSelectedFilteredRows(lctx)
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbrows), nil
+		return s.dbToCollResource(lctx, dbrows), nil
 	case params.HasFields:
-		s.FieldsStr = r.Fields
-		dbrows, err := s.getAllSelectedRows()
+		dbrows, err := s.getAllSelectedRows(lctx)
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbrows), nil
+		return s.dbToCollResource(lctx, dbrows), nil
 	case params.HasFilter:
-		s.FilterStr = r.Filter
-		dbrows, err := s.getAllFilteredRows()
+		dbrows, err := s.getAllFilteredRows(lctx)
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbrows), nil
+		return s.dbToCollResource(lctx, dbrows), nil
 	default:
-		dbrows, err := s.getAllRows()
+		dbrows, err := s.getAllRows(lctx)
 		if err != nil {
 			return &user.PermissionCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbrows), nil
+		return s.dbToCollResource(lctx, dbrows), nil
 	}
 }
 
@@ -158,6 +157,7 @@ func (s *PermissionService) CreatePermission(ctx context.Context, r *user.Create
 	}
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
 	return s.buildResource(
+		context.TODO(),
 		aphgrpc.NullToInt64(newdbPerm.AuthPermissionId),
 		s.dbToResourceAttributes(newdbPerm),
 	), nil
@@ -182,7 +182,7 @@ func (s *PermissionService) UpdatePermission(ctx context.Context, r *user.Update
 			return &user.Permission{}, status.Error(codes.Internal, err.Error())
 		}
 	}
-	return s.buildResource(r.Data.Id, r.Data.Attributes), nil
+	return s.buildResource(context.TODO(), r.Data.Id, r.Data.Attributes), nil
 }
 
 func (s *PermissionService) DeletePermission(ctx context.Context, r *jsonapi.DeleteRequest) (*empty.Empty, error) {
@@ -216,29 +216,33 @@ func (s *PermissionService) existsResource(id int64) (bool, error) {
 	return true, nil
 }
 
-func (s *PermissionService) getResourceWithSelectedAttr(id int64) (*user.Permission, error) {
+func (s *PermissionService) getResourceWithSelectedAttr(ctx context.Context, id int64) (*user.Permission, error) {
 	dperm := &dbPermission{}
-	columns := s.MapFieldsToColumns(s.Params.Fields)
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return &user.Permission{}, fmt.Errorf("no params object found in context")
+	}
+	columns := s.MapFieldsToColumns(params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(permDbTable).
 		Where("auth_permission_id = $1", id).QueryStruct(dperm)
 	if err != nil {
 		return &user.Permission{}, err
 	}
-	return s.buildResource(id, s.dbToResourceAttributes(dperm)), nil
+	return s.buildResource(ctx, id, s.dbToResourceAttributes(dperm)), nil
 }
 
-func (s *PermissionService) getResource(id int64) (*user.Permission, error) {
+func (s *PermissionService) getResource(ctx context.Context, id int64) (*user.Permission, error) {
 	dperm := &dbPermission{}
 	err := s.Dbh.Select(fmt.Sprintf("%s.*", permDbTable)).From(permDbTable).
 		Where("auth_permission_id = $1", id).QueryStruct(dperm)
 	if err != nil {
 		return &user.Permission{}, err
 	}
-	return s.buildResource(id, s.dbToResourceAttributes(dperm)), nil
+	return s.buildResource(ctx, id, s.dbToResourceAttributes(dperm)), nil
 }
 
-func (s *PermissionService) getAllRows() ([]*dbPermission, error) {
+func (s *PermissionService) getAllRows(ctx context.Context) ([]*dbPermission, error) {
 	var dbrows []*dbPermission
 	err := s.Dbh.Select(fmt.Sprintf("%s.*", permDbTable)).
 		From(permDbTable).
@@ -246,56 +250,68 @@ func (s *PermissionService) getAllRows() ([]*dbPermission, error) {
 	return dbrows, err
 }
 
-func (s *PermissionService) getAllSelectedRows() ([]*dbPermission, error) {
+func (s *PermissionService) getAllSelectedRows(ctx context.Context) ([]*dbPermission, error) {
 	var dbrows []*dbPermission
-	columns := s.MapFieldsToColumns(s.Params.Fields)
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return dbrows, fmt.Errorf("no params object found in context")
+	}
+	columns := s.MapFieldsToColumns(params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(permDbTable).
 		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
-func (s *PermissionService) getAllFilteredRows() ([]*dbPermission, error) {
+func (s *PermissionService) getAllFilteredRows(ctx context.Context) ([]*dbPermission, error) {
 	var dbrows []*dbPermission
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return dbrows, fmt.Errorf("no params object found in context")
+	}
 	err := s.Dbh.Select(fmt.Sprintf("%s.*", permDbTable)).
 		From(permDbTable).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
-			aphgrpc.FilterToBindValue(s.Params.Filters)...,
+			aphgrpc.FilterToWhereClause(s, params.Filters),
+			aphgrpc.FilterToBindValue(params.Filters)...,
 		).
 		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
-func (s *PermissionService) getAllSelectedFilteredRows() ([]*dbPermission, error) {
+func (s *PermissionService) getAllSelectedFilteredRows(ctx context.Context) ([]*dbPermission, error) {
 	var dbrows []*dbPermission
-	columns := s.MapFieldsToColumns(s.Params.Fields)
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return dbrows, fmt.Errorf("no params object found in context")
+	}
+	columns := s.MapFieldsToColumns(params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(permDbTable).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
-			aphgrpc.FilterToBindValue(s.Params.Filters)...,
+			aphgrpc.FilterToWhereClause(s, params.Filters),
+			aphgrpc.FilterToBindValue(params.Filters)...,
 		).
 		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
-func (s *PermissionService) buildResourceData(id int64, attr *user.PermissionAttributes) *user.PermissionData {
+func (s *PermissionService) buildResourceData(ctx context.Context, id int64, attr *user.PermissionAttributes) *user.PermissionData {
 	return &user.PermissionData{
 		Type:       s.GetResourceName(),
 		Id:         id,
 		Attributes: attr,
 		Links: &jsonapi.Links{
-			Self: s.GenResourceSelfLink(id),
+			Self: s.GenResourceSelfLink(ctx, id),
 		},
 	}
 }
 
-func (s *PermissionService) buildResource(id int64, attr *user.PermissionAttributes) *user.Permission {
+func (s *PermissionService) buildResource(ctx context.Context, id int64, attr *user.PermissionAttributes) *user.Permission {
 	return &user.Permission{
-		Data: s.buildResourceData(id, attr),
+		Data: s.buildResourceData(ctx, id, attr),
 		Links: &jsonapi.Links{
-			Self: s.GenResourceSelfLink(id),
+			Self: s.GenResourceSelfLink(ctx, id),
 		},
 	}
 }
@@ -318,19 +334,25 @@ func (s *PermissionService) attrTodbPermission(attr *user.PermissionAttributes) 
 	}
 }
 
-func (s *PermissionService) dbToCollResourceData(dbrows []*dbPermission) []*user.PermissionData {
+func (s *PermissionService) dbToCollResourceData(ctx context.Context, dbrows []*dbPermission) []*user.PermissionData {
 	var pdata []*user.PermissionData
 	for _, dperm := range dbrows {
-		pdata = append(pdata, s.buildResourceData(aphgrpc.NullToInt64(dperm.AuthPermissionId), s.dbToResourceAttributes(dperm)))
+		pdata = append(
+			pdata,
+			s.buildResourceData(
+				ctx,
+				aphgrpc.NullToInt64(dperm.AuthPermissionId),
+				s.dbToResourceAttributes(dperm),
+			))
 	}
 	return pdata
 }
 
-func (s *PermissionService) dbToCollResource(dbrows []*dbPermission) *user.PermissionCollection {
+func (s *PermissionService) dbToCollResource(ctx context.Context, dbrows []*dbPermission) *user.PermissionCollection {
 	return &user.PermissionCollection{
-		Data: s.dbToCollResourceData(dbrows),
+		Data: s.dbToCollResourceData(ctx, dbrows),
 		Links: &jsonapi.Links{
-			Self: s.GenCollResourceSelfLink(),
+			Self: s.GenCollResourceSelfLink(ctx),
 		},
 	}
 }

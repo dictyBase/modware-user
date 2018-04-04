@@ -76,9 +76,11 @@ func TestMain(m *testing.M) {
 }
 
 func tearDownTest(t *testing.T) {
-	_, err := db.Exec("TRUNCATE auth_permission,auth_role,auth_role_permission,auth_user,auth_user_info,auth_user_role")
-	if err != nil {
-		t.Fatalf("unable to truncate tables %s\n", err)
+	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
+		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
+		if err != nil {
+			t.Fatalf("unable to truncate table %s %s\n", t, err)
+		}
 	}
 }
 

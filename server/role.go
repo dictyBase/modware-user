@@ -74,41 +74,36 @@ func (s *RoleService) GetRole(ctx context.Context, r *jsonapi.GetRequest) (*user
 		grpc.SetTrailer(ctx, md)
 		return &user.Role{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.Params = params
-	s.ListMethod = false
+	gctx := aphgrpc.GetReqCtx(params, r)
 	switch {
 	case params.HasFields && params.HasInclude:
-		s.IncludeStr = r.Include
-		s.FieldsStr = r.Fields
-		role, err := s.getResourceWithSelectedAttr(r.Id)
+		role, err := s.getResourceWithSelectedAttr(gctx, r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
-		err = s.buildResourceRelationships(r.Id, role)
+		err = s.buildResourceRelationships(gctx, r.Id, role)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
 		return role, nil
 	case params.HasFields:
-		s.FieldsStr = r.Fields
-		role, err := s.getResourceWithSelectedAttr(r.Id)
+		role, err := s.getResourceWithSelectedAttr(gctx, r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
 		return role, nil
 	case params.HasInclude:
-		s.IncludeStr = r.Include
-		role, err := s.getResource(r.Id)
+		role, err := s.getResource(gctx, r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
-		err = s.buildResourceRelationships(r.Id, role)
+		err = s.buildResourceRelationships(gctx, r.Id, role)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
 		return role, nil
 	default:
-		role, err := s.getResource(r.Id)
+		role, err := s.getResource(gctx, r.Id)
 		if err != nil {
 			return &user.Role{}, aphgrpc.HandleError(ctx, err)
 		}
@@ -177,86 +172,79 @@ func (s *RoleService) ListRoles(ctx context.Context, r *jsonapi.SimpleListReques
 		grpc.SetTrailer(ctx, md)
 		return &user.RoleCollection{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	s.Params = params
-	s.ListMethod = true
+	lctx := aphgrpc.ListReqCtx(
+		params,
+		&jsonapi.ListRequest{
+			Fields:  r.Fields,
+			Filter:  r.Filter,
+			Include: r.Include,
+		})
 	// request without any pagination query parameters
 	switch {
 	case params.HasFields && params.HasFilter && params.HasInclude:
-		s.FieldsStr = r.Fields
-		s.FilterStr = r.Filter
-		s.IncludeStr = r.Include
-		dbRoles, err := s.getAllSelectedFilteredRows()
+		dbRoles, err := s.getAllSelectedFilteredRows(lctx)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		r, err := s.dbToCollResourceWithRel(dbRoles)
+		r, err := s.dbToCollResourceWithRel(lctx, dbRoles)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		return r, nil
 	case params.HasFields && params.HasFilter:
-		s.FieldsStr = r.Fields
-		s.FilterStr = r.Filter
-		dbRoles, err := s.getAllSelectedFilteredRows()
+		dbRoles, err := s.getAllSelectedFilteredRows(lctx)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbRoles), nil
+		return s.dbToCollResource(lctx, dbRoles), nil
 	case params.HasFields && params.HasInclude:
-		s.FieldsStr = r.Fields
-		s.IncludeStr = r.Include
-		dbRoles, err := s.getAllSelectedRows()
+		dbRoles, err := s.getAllSelectedRows(lctx)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		r, err := s.dbToCollResourceWithRel(dbRoles)
+		r, err := s.dbToCollResourceWithRel(lctx, dbRoles)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		return r, nil
 	case params.HasFilter && params.HasInclude:
-		s.IncludeStr = r.Include
-		s.FilterStr = r.Filter
-		dbRoles, err := s.getAllFilteredRows()
+		dbRoles, err := s.getAllFilteredRows(lctx)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		r, err := s.dbToCollResourceWithRel(dbRoles)
+		r, err := s.dbToCollResourceWithRel(lctx, dbRoles)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		return r, nil
 	case params.HasFields:
-		s.FieldsStr = r.Fields
-		dbRoles, err := s.getAllSelectedRows()
+		dbRoles, err := s.getAllSelectedRows(lctx)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbRoles), nil
+		return s.dbToCollResource(lctx, dbRoles), nil
 	case params.HasFilter:
-		s.FilterStr = r.Filter
-		dbRoles, err := s.getAllFilteredRows()
+		dbRoles, err := s.getAllFilteredRows(lctx)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbRoles), nil
+		return s.dbToCollResource(lctx, dbRoles), nil
 	case params.HasInclude:
-		s.IncludeStr = r.Include
-		dbRoles, err := s.getAllRows()
+		dbRoles, err := s.getAllRows(lctx)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		r, err := s.dbToCollResourceWithRel(dbRoles)
+		r, err := s.dbToCollResourceWithRel(lctx, dbRoles)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
 		return r, nil
 	default:
-		dbRoles, err := s.getAllRows()
+		dbRoles, err := s.getAllRows(lctx)
 		if err != nil {
 			return &user.RoleCollection{}, aphgrpc.HandleError(ctx, err)
 		}
-		return s.dbToCollResource(dbRoles), nil
+		return s.dbToCollResource(lctx, dbRoles), nil
 	}
 }
 
@@ -301,7 +289,7 @@ func (s *RoleService) CreateRole(ctx context.Context, r *user.CreateRoleRequest)
 		}
 	}
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST"))
-	return s.buildResource(roleId, s.dbToResourceAttributes(dbrole)), nil
+	return s.buildResource(context.TODO(), roleId, s.dbToResourceAttributes(dbrole)), nil
 }
 
 func (s *RoleService) CreateUserRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
@@ -415,7 +403,7 @@ func (s *RoleService) UpdateRole(ctx context.Context, r *user.UpdateRoleRequest)
 			}
 		}
 	}
-	return s.buildResource(dbrole.AuthRoleId, s.dbToResourceAttributes(dbrole)), nil
+	return s.buildResource(context.TODO(), dbrole.AuthRoleId, s.dbToResourceAttributes(dbrole)), nil
 }
 
 func (s *RoleService) UpdateUserRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
@@ -545,18 +533,22 @@ func (s *RoleService) existsResource(id int64) (bool, error) {
 	return true, nil
 }
 
-func (s *RoleService) getResourceWithSelectedAttr(id int64) (*user.Role, error) {
+func (s *RoleService) getResourceWithSelectedAttr(ctx context.Context, id int64) (*user.Role, error) {
 	drole := &dbRole{}
-	columns := s.MapFieldsToColumns(s.Params.Fields)
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return &user.Role{}, fmt.Errorf("no params object found in context")
+	}
+	columns := s.MapFieldsToColumns(params.Fields)
 	err := s.Dbh.Select(columns...).From(roleDbTblAlias).
 		Where("role.auth_role_id = $1", id).QueryStruct(drole)
 	if err != nil {
 		return &user.Role{}, err
 	}
-	return s.buildResource(id, s.dbToResourceAttributes(drole)), nil
+	return s.buildResource(ctx, id, s.dbToResourceAttributes(drole)), nil
 }
 
-func (s *RoleService) getResource(id int64) (*user.Role, error) {
+func (s *RoleService) getResource(ctx context.Context, id int64) (*user.Role, error) {
 	drole := &dbRole{}
 	err := s.Dbh.Select("role.*").
 		From(roleDbTblAlias).
@@ -565,10 +557,10 @@ func (s *RoleService) getResource(id int64) (*user.Role, error) {
 	if err != nil {
 		return &user.Role{}, err
 	}
-	return s.buildResource(id, s.dbToResourceAttributes(drole)), nil
+	return s.buildResource(ctx, id, s.dbToResourceAttributes(drole)), nil
 }
 
-func (s *RoleService) getAllRows() ([]*dbRole, error) {
+func (s *RoleService) getAllRows(ctx context.Context) ([]*dbRole, error) {
 	var dbrows []*dbRole
 	err := s.Dbh.Select("role.*").
 		From(roleDbTblAlias).
@@ -576,35 +568,47 @@ func (s *RoleService) getAllRows() ([]*dbRole, error) {
 	return dbrows, err
 }
 
-func (s *RoleService) getAllSelectedRows() ([]*dbRole, error) {
+func (s *RoleService) getAllSelectedRows(ctx context.Context) ([]*dbRole, error) {
 	var dbrows []*dbRole
-	columns := s.MapFieldsToColumns(s.Params.Fields)
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return dbrows, fmt.Errorf("no params object found in context")
+	}
+	columns := s.MapFieldsToColumns(params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(roleDbTblAlias).
 		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
-func (s *RoleService) getAllFilteredRows() ([]*dbRole, error) {
+func (s *RoleService) getAllFilteredRows(ctx context.Context) ([]*dbRole, error) {
 	var dbrows []*dbRole
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return dbrows, fmt.Errorf("no params object found in context")
+	}
 	err := s.Dbh.Select("role.*").
 		From(roleDbTblAlias).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
-			aphgrpc.FilterToBindValue(s.Params.Filters)...,
+			aphgrpc.FilterToWhereClause(s, params.Filters),
+			aphgrpc.FilterToBindValue(params.Filters)...,
 		).
 		QueryStructs(&dbrows)
 	return dbrows, err
 }
 
-func (s *RoleService) getAllSelectedFilteredRows() ([]*dbRole, error) {
+func (s *RoleService) getAllSelectedFilteredRows(ctx context.Context) ([]*dbRole, error) {
 	var dbrows []*dbRole
-	columns := s.MapFieldsToColumns(s.Params.Fields)
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return dbrows, fmt.Errorf("no params object found in context")
+	}
+	columns := s.MapFieldsToColumns(params.Fields)
 	err := s.Dbh.Select(columns...).
 		From(roleDbTblAlias).
 		Scope(
-			aphgrpc.FilterToWhereClause(s, s.Params.Filters),
-			aphgrpc.FilterToBindValue(s.Params.Filters)...,
+			aphgrpc.FilterToWhereClause(s, params.Filters),
+			aphgrpc.FilterToBindValue(params.Filters)...,
 		).
 		QueryStructs(&dbrows)
 	return dbrows, err
@@ -623,7 +627,7 @@ func (s *RoleService) getPermissionResourceData(id int64) ([]*user.PermissionDat
 	}
 	return NewPermissionService(
 		s.Dbh,
-	).dbToCollResourceData(dbrows), nil
+	).dbToCollResourceData(context.TODO(), dbrows), nil
 }
 
 func (s *RoleService) getRelatedUsersCount(id int64) (int64, error) {
@@ -654,7 +658,7 @@ func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 	}
 	return NewUserService(
 		s.Dbh,
-	).dbToCollResourceData(dbrows), nil
+	).dbToCollResourceData(context.TODO(), dbrows), nil
 }
 
 func (s *RoleService) getUserResourceDataWithPagination(id, pagenum, pagesize int64) ([]*user.UserData, error) {
@@ -683,7 +687,7 @@ func (s *RoleService) getUserResourceDataWithPagination(id, pagenum, pagesize in
 	}
 	return NewUserService(
 		s.Dbh,
-	).dbToCollResourceData(dbrows), nil
+	).dbToCollResourceData(context.TODO(), dbrows), nil
 }
 
 func (s *RoleService) buildUserResourceIdentifiers(users []*user.UserData) []*jsonapi.Data {
@@ -708,7 +712,7 @@ func (s *RoleService) buildPermissionResourceIdentifiers(perms []*user.Permissio
 	return jdata
 }
 
-func (s *RoleService) buildResourceData(id int64, attr *user.RoleAttributes) *user.RoleData {
+func (s *RoleService) buildResourceData(ctx context.Context, id int64, attr *user.RoleAttributes) *user.RoleData {
 	return &user.RoleData{
 		Type:       s.GetResourceName(),
 		Id:         id,
@@ -728,23 +732,27 @@ func (s *RoleService) buildResourceData(id int64, attr *user.RoleAttributes) *us
 			},
 		},
 		Links: &jsonapi.Links{
-			Self: s.GenResourceSelfLink(id),
+			Self: s.GenResourceSelfLink(ctx, id),
 		},
 	}
 }
 
-func (s *RoleService) buildResource(id int64, attr *user.RoleAttributes) *user.Role {
+func (s *RoleService) buildResource(ctx context.Context, id int64, attr *user.RoleAttributes) *user.Role {
 	return &user.Role{
-		Data: s.buildResourceData(id, attr),
+		Data: s.buildResourceData(ctx, id, attr),
 		Links: &jsonapi.Links{
-			Self: s.GenResourceSelfLink(id),
+			Self: s.GenResourceSelfLink(ctx, id),
 		},
 	}
 }
 
-func (s *RoleService) buildResourceRelationships(id int64, role *user.Role) error {
+func (s *RoleService) buildResourceRelationships(ctx context.Context, id int64, role *user.Role) error {
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return fmt.Errorf("no params object found in context")
+	}
 	var allInc []*any.Any
-	for _, inc := range s.Params.Includes {
+	for _, inc := range params.Includes {
 		switch inc {
 		case "users":
 			users, err := s.getUserResourceData(id)
@@ -784,28 +792,32 @@ func (s *RoleService) dbToResourceAttributes(r *dbRole) *user.RoleAttributes {
 	}
 }
 
-func (s *RoleService) dbToCollResourceData(dbrows []*dbRole) []*user.RoleData {
+func (s *RoleService) dbToCollResourceData(ctx context.Context, dbrows []*dbRole) []*user.RoleData {
 	var rdata []*user.RoleData
 	for _, r := range dbrows {
-		rdata = append(rdata, s.buildResourceData(r.AuthRoleId, s.dbToResourceAttributes(r)))
+		rdata = append(rdata, s.buildResourceData(ctx, r.AuthRoleId, s.dbToResourceAttributes(r)))
 	}
 	return rdata
 }
 
-func (s *RoleService) dbToCollResource(dbrows []*dbRole) *user.RoleCollection {
+func (s *RoleService) dbToCollResource(ctx context.Context, dbrows []*dbRole) *user.RoleCollection {
 	return &user.RoleCollection{
-		Data: s.dbToCollResourceData(dbrows),
+		Data: s.dbToCollResourceData(ctx, dbrows),
 		Links: &jsonapi.Links{
-			Self: s.GenCollResourceSelfLink(),
+			Self: s.GenCollResourceSelfLink(ctx),
 		},
 	}
 }
 
-func (s *RoleService) dbToCollResourceWithRel(dbrows []*dbRole) (*user.RoleCollection, error) {
-	rdata := s.dbToCollResourceData(dbrows)
+func (s *RoleService) dbToCollResourceWithRel(ctx context.Context, dbrows []*dbRole) (*user.RoleCollection, error) {
+	params, ok := ctx.Value(aphgrpc.ContextKeyParams).(*aphgrpc.JSONAPIParams)
+	if !ok {
+		return &user.RoleCollection{}, fmt.Errorf("no params object found in context")
+	}
+	rdata := s.dbToCollResourceData(ctx, dbrows)
 	var allInc []*any.Any
 	// related users
-	for _, inc := range s.Params.Includes {
+	for _, inc := range params.Includes {
 		switch inc {
 		case "users":
 			var users []*user.UserData
@@ -842,7 +854,7 @@ func (s *RoleService) dbToCollResourceWithRel(dbrows []*dbRole) (*user.RoleColle
 	return &user.RoleCollection{
 		Data: rdata,
 		Links: &jsonapi.Links{
-			Self: s.GenCollResourceSelfLink(),
+			Self: s.GenCollResourceSelfLink(ctx),
 		},
 		Included: allInc,
 	}, nil
