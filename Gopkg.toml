@@ -34,8 +34,9 @@
   name = "github.com/dictyBase/go-genproto"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/golang/protobuf"
-  version = "1.0.0"
+  #version = "1.0.0"
 
 [[constraint]]
   name = "github.com/grpc-ecosystem/grpc-gateway"

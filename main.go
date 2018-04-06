@@ -28,45 +28,135 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		{
+			Name:   "start-role-server",
+			Usage:  "starts the modware-role microservice with HTTP and grpc backends",
+			Action: commands.RunRoleServer,
+			Before: validate.ValidateArgs,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "user-api-http-host",
+					EnvVar: "USER_API_HTTP_HOST",
+					Usage:  "public hostname serving the http api, by default the default port will be appended to http://localhost",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-pass",
+					EnvVar: "DICTYCONTENT_PASS",
+					Usage:  "dictycontent database password",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-db",
+					EnvVar: "DICTYCONTENT_DB",
+					Usage:  "dictycontent database name",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-user",
+					EnvVar: "DICTYCONTENT_USER",
+					Usage:  "dictycontent database user",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-host",
+					Value:  "dictycontent-backend",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_HOST",
+					Usage:  "dictycontent database host",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-port",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_PORT",
+					Usage:  "dictycontent database port",
+				},
+				cli.StringFlag{
+					Name:  "port",
+					Usage: "tcp port at which the role server will be available",
+					Value: "9597",
+				},
+			},
+		},
+		{
+			Name:   "start-permission-server",
+			Usage:  "starts the modware-permission microservice with HTTP and grpc backends",
+			Action: commands.RunPermissionServer,
+			Before: validate.ValidateArgs,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "user-api-http-host",
+					EnvVar: "USER_API_HTTP_HOST",
+					Usage:  "public hostname serving the http api, by default the default port will be appended to http://localhost",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-pass",
+					EnvVar: "DICTYCONTENT_PASS",
+					Usage:  "dictycontent database password",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-db",
+					EnvVar: "DICTYCONTENT_DB",
+					Usage:  "dictycontent database name",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-user",
+					EnvVar: "DICTYCONTENT_USER",
+					Usage:  "dictycontent database user",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-host",
+					Value:  "dictycontent-backend",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_HOST",
+					Usage:  "dictycontent database host",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-port",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_PORT",
+					Usage:  "dictycontent database port",
+				},
+				cli.StringFlag{
+					Name:  "port",
+					Usage: "tcp port at which the user server will be available",
+					Value: "9596",
+				},
+			},
+		},
+		{
 			Name:   "start-user-server",
 			Usage:  "starts the modware-user microservice with HTTP and grpc backends",
 			Action: commands.RunUserServer,
 			Before: validate.ValidateArgs,
-			cli.StringFlag{
-				Name:   "user-api-http-host",
-				EnvVar: "USER_API_HTTP_HOST",
-				Usage:  "public hostname serving the http api, by default the default port will be appended to http://localhost",
-			},
-			cli.StringFlag{
-				Name:   "dictycontent-pass",
-				EnvVar: "DICTYCONTENT_PASS",
-				Usage:  "dictycontent database password",
-			},
-			cli.StringFlag{
-				Name:   "dictycontent-db",
-				EnvVar: "DICTYCONTENT_DB",
-				Usage:  "dictycontent database name",
-			},
-			cli.StringFlag{
-				Name:   "dictycontent-user",
-				EnvVar: "DICTYCONTENT_USER",
-				Usage:  "dictycontent database user",
-			},
-			cli.StringFlag{
-				Name:   "dictycontent-host",
-				Value:  "dictycontent-backend",
-				EnvVar: "DICTYCONTENT_BACKEND_SERVICE_HOST",
-				Usage:  "dictycontent database host",
-			},
-			cli.StringFlag{
-				Name:   "dictycontent-port",
-				EnvVar: "DICTYCONTENT_BACKEND_SERVICE_PORT",
-				Usage:  "dictycontent database port",
-			},
-			cli.StringFlag{
-				Name:  "port",
-				Usage: "tcp port at which the user server will be available",
-				Value: "9596",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "user-api-http-host",
+					EnvVar: "USER_API_HTTP_HOST",
+					Usage:  "public hostname serving the http api, by default the default port will be appended to http://localhost",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-pass",
+					EnvVar: "DICTYCONTENT_PASS",
+					Usage:  "dictycontent database password",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-db",
+					EnvVar: "DICTYCONTENT_DB",
+					Usage:  "dictycontent database name",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-user",
+					EnvVar: "DICTYCONTENT_USER",
+					Usage:  "dictycontent database user",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-host",
+					Value:  "dictycontent-backend",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_HOST",
+					Usage:  "dictycontent database host",
+				},
+				cli.StringFlag{
+					Name:   "dictycontent-port",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_PORT",
+					Usage:  "dictycontent database port",
+				},
+				cli.StringFlag{
+					Name:  "port",
+					Usage: "tcp port at which the user server will be available",
+					Value: "9596",
+				},
 			},
 		},
 	}
