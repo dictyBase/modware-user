@@ -186,6 +186,28 @@ func TestDeleteUser(t *testing.T) {
 	}
 }
 
+func TestExistUser(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewUserServiceClient(conn)
+	nuser, err := client.CreateUser(context.Background(), NewUser("bobsacamano@seinfeld.org"))
+	if err != nil {
+		t.Fatalf("could not store the user %s\n", err)
+	}
+	res, err := client.ExistUser(context.Background(), &jsonapi.IdRequest{Id: nuser.Data.Id})
+	if err != nil {
+		t.Fatalf("could not check the user %s\n", err)
+	}
+	if !res.Exist {
+		t.Fatalf("could not found the user %s\n", nuser.Data.Attributes.Email)
+	}
+}
+
 func TestGetUser(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
