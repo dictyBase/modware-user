@@ -28,6 +28,34 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		{
+			Name:   "start-user-reply",
+			Usage:  "start the reply messaging(nats) backend for user microservice",
+			Action: commands.RunUserReply,
+			Before: validate.ValidateReplyArgs,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "user-grpc-host",
+					EnvVar: "USER_API_SERVICE_HOST",
+					Usage:  "grpc host address for user service",
+				},
+				cli.StringFlag{
+					Name:   "user-grpc-port",
+					EnvVar: "USER_API_SERVICE_PORT",
+					Usage:  "grpc port for user service",
+				},
+				cli.StringFlag{
+					Name:   "messaging-host",
+					EnvVar: "NATS_SERVICE_HOST",
+					Usage:  "host address for messaging server",
+				},
+				cli.StringFlag{
+					Name:   "messaging-port",
+					EnvVar: "NATS_SERVICE_PORT",
+					Usage:  "port for messaging server",
+				},
+			},
+		},
+		{
 			Name:   "start-role-server",
 			Usage:  "starts the modware-role microservice with HTTP and grpc backends",
 			Action: commands.RunRoleServer,
