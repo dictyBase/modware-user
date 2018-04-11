@@ -68,7 +68,7 @@ func main() {
 				},
 				cli.StringFlag{
 					Name:   "dictyuser-pass",
-					EnvVar: "DICTYUSER_PASS",
+					EnvVar: "DICTYUSER_PASSWORD",
 					Usage:  "dictyuser database password",
 				},
 				cli.StringFlag{
@@ -84,12 +84,12 @@ func main() {
 				cli.StringFlag{
 					Name:   "dictyuser-host",
 					Value:  "dictycontent-backend",
-					EnvVar: "DICTYUSER_BACKEND_SERVICE_HOST",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_HOST",
 					Usage:  "dictyuser database host",
 				},
 				cli.StringFlag{
 					Name:   "dictyuser-port",
-					EnvVar: "DICTYUSER_BACKEND_SERVICE_PORT",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_PORT",
 					Usage:  "dictyuser database port",
 				},
 				cli.StringFlag{
@@ -112,7 +112,7 @@ func main() {
 				},
 				cli.StringFlag{
 					Name:   "dictyuser-pass",
-					EnvVar: "DICTYUSER_PASS",
+					EnvVar: "DICTYUSER_PASSWORD",
 					Usage:  "dictyuser database password",
 				},
 				cli.StringFlag{
@@ -127,13 +127,13 @@ func main() {
 				},
 				cli.StringFlag{
 					Name:   "dictyuser-host",
-					Value:  "dictyuser-backend",
-					EnvVar: "DICTYUSER_BACKEND_SERVICE_HOST",
+					Value:  "dictycontent-backend",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_HOST",
 					Usage:  "dictyuser database host",
 				},
 				cli.StringFlag{
 					Name:   "dictyuser-port",
-					EnvVar: "DICTYUSER_BACKEND_SERVICE_PORT",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_PORT",
 					Usage:  "dictyuser database port",
 				},
 				cli.StringFlag{
@@ -156,7 +156,7 @@ func main() {
 				},
 				cli.StringFlag{
 					Name:   "dictyuser-pass",
-					EnvVar: "DICTYUSER_PASS",
+					EnvVar: "DICTYUSER_PASSWORD",
 					Usage:  "dictyuser database password",
 				},
 				cli.StringFlag{
@@ -171,13 +171,13 @@ func main() {
 				},
 				cli.StringFlag{
 					Name:   "dictyuser-host",
-					Value:  "dictyuser-backend",
-					EnvVar: "DICTYUSER_BACKEND_SERVICE_HOST",
+					Value:  "dictycontent-backend",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_HOST",
 					Usage:  "dictyuser database host",
 				},
 				cli.StringFlag{
 					Name:   "dictyuser-port",
-					EnvVar: "DICTYUSER_BACKEND_SERVICE_PORT",
+					EnvVar: "DICTYCONTENT_BACKEND_SERVICE_PORT",
 					Usage:  "dictyuser database port",
 				},
 				cli.StringFlag{
