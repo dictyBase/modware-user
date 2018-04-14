@@ -8,6 +8,24 @@
   version = "v0.4.7"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/arangodb/go-driver"
+  packages = [
+    ".",
+    "cluster",
+    "util",
+    "vst",
+    "vst/protocol"
+  ]
+  revision = "05be539c7e1bc3196ba711b58b9d6412858cbbc4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/arangodb/go-velocypack"
+  packages = ["."]
+  revision = "c899a2a2271f97f297fd70afd031e5ffb9497f83"
+
+[[projects]]
   name = "github.com/cenkalti/backoff"
   packages = ["."]
   revision = "61153c768f31ee5f130071d08fc82b85208528de"
@@ -19,9 +37,10 @@
   packages = [
     "aphcollection",
     "aphdocker",
+    "aphfile",
     "aphgrpc"
   ]
-  revision = "c1c22cc2de8c8270c95834c3cef06af18be6c1c6"
+  revision = "73489ed3dc19cbe9ec93723cf66db7aee9bc66c6"
 
 [[projects]]
   branch = "master"
@@ -82,6 +101,12 @@
   version = "v0.3.2"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  revision = "bb3d318650d48840a39aa21a027c6630e198e626"
+
+[[projects]]
   name = "github.com/fatih/structs"
   packages = ["."]
   revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
@@ -95,6 +120,12 @@
   ]
   revision = "d1ed5c67e5794de818ea85e6b522fda02623a484"
   version = "v1.5.0"
+
+[[projects]]
+  name = "github.com/go-ini/ini"
+  packages = ["."]
+  revision = "ace140f73450505f33e8b8418216792275ae82a7"
+  version = "v1.35.0"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -219,6 +250,19 @@
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/minio/minio-go"
+  packages = [
+    ".",
+    "pkg/credentials",
+    "pkg/encrypt",
+    "pkg/s3signer",
+    "pkg/s3utils",
+    "pkg/set"
+  ]
+  revision = "3d2d02921f0510e9d1f66ef77a265b8dddd36992"
+  version = "6.0.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
@@ -316,6 +360,8 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
+    "argon2",
+    "blake2b",
     "cast5",
     "curve25519",
     "ed25519",
@@ -510,6 +556,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6ced5946ce7c1de89e8b547d46b57d7bd559c2b6d8b5356cc64d0098f2b041be"
+  inputs-digest = "42641b343350e8332b2f814098fc528914cd67298f6ce6fbfedfcd041f692159"
   solver-name = "gps-cdcl"
   solver-version = 1

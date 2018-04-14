@@ -94,6 +94,7 @@ func RunUserReply(c *cli.Context) error {
 			2,
 		)
 	}
+	defer conn.Close()
 	err = reply.Start(
 		"UserService.*",
 		gclient.NewUserClient(conn),

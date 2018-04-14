@@ -39,3 +39,24 @@ func ValidateArgs(c *cli.Context) error {
 	}
 	return nil
 }
+
+func validateS3Args(c *cli.Context) error {
+	for _, p := range []string{"s3-server", "s3-bucket", "access-key", "secret-key"} {
+		if len(c.String(p)) == 0 {
+			return cli.NewExitError(fmt.Sprintf("argument %s is missing", p), 2)
+		}
+	}
+	return nil
+}
+
+func ValidateLoad(c *cli.Context) error {
+	if err := validateS3Args(c); err != nil {
+		return err
+	}
+	for _, p := range []string{"user-grpc-host", "user-grpc-port"} {
+		if len(c.String(p)) == 0 {
+			return cli.NewExitError(fmt.Sprintf("argument %s is missing", p), 2)
+		}
+	}
+	return nil
+}

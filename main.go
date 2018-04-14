@@ -28,6 +28,61 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		{
+			Name:   "load-users",
+			Usage:  "load dictybase users(colleagues) into the backend",
+			Action: commands.LoadUser,
+			Before: validate.ValidateLoad,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "remote-path, rp",
+					Usage: "full path(relative to the bucket) of s3 object which will be download",
+					Value: "import/users.tar.gz",
+				},
+				cli.StringFlag{
+					Name:   "s3-server",
+					Usage:  "S3 server endpoint",
+					Value:  "minio",
+					EnvVar: "MINIO_SERVICE_HOST",
+				},
+				cli.StringFlag{
+					Name:   "s3-server-port",
+					Usage:  "S3 server port",
+					EnvVar: "MINIO_SERVICE_PORT",
+				},
+				cli.StringFlag{
+					Name:  "s3-bucket",
+					Usage: "S3 bucket where the import data is kept",
+					Value: "dictybase",
+				},
+				cli.StringFlag{
+					Name:   "access-key, akey",
+					EnvVar: "S3_ACCESS_KEY",
+					Usage:  "access key for S3 server, required based on command run",
+				},
+				cli.StringFlag{
+					Name:   "secret-key, skey",
+					EnvVar: "S3_SECRET_KEY",
+					Usage:  "secret key for S3 server, required based on command run",
+				},
+				cli.StringFlag{
+					Name:   "user-grpc-host",
+					EnvVar: "USER_API_SERVICE_HOST",
+					Usage:  "grpc host address for user service",
+					Value:  "user-api",
+				},
+				cli.StringFlag{
+					Name:   "user-grpc-port",
+					EnvVar: "USER_API_SERVICE_PORT",
+					Usage:  "grpc port for user service",
+				},
+				cli.StringFlag{
+					Name:  "data-file",
+					Value: "users.csv",
+					Usage: "file containing user data that is present in the bucket",
+				},
+			},
+		},
+		{
 			Name:   "start-user-reply",
 			Usage:  "start the reply messaging(nats) backend for user microservice",
 			Action: commands.RunUserReply,
@@ -47,6 +102,7 @@ func main() {
 					Name:   "messaging-host",
 					EnvVar: "NATS_SERVICE_HOST",
 					Usage:  "host address for messaging server",
+					Value:  "nats",
 				},
 				cli.StringFlag{
 					Name:   "messaging-port",
