@@ -102,14 +102,6 @@ func RunRoleServer(c *cli.Context) error {
 }
 
 func RunUserServer(c *cli.Context) error {
-	cStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		c.String("dictyuser-user"),
-		c.String("dictyuser-pass"),
-		c.String("dictyuser-host"),
-		c.String("dictyuser-port"),
-		c.String("dictyuser-db"),
-	)
-	fmt.Println(cStr)
 	dbh, err := getPgWrapper(c)
 	if err != nil {
 		return cli.NewExitError(
@@ -269,18 +261,7 @@ func getPgxDbHandler(c *cli.Context) (*sql.DB, error) {
 		c.String("dictyuser-port"),
 		c.String("dictyuser-db"),
 	)
-	logrus.Errorf("connect string %s\n", cStr)
-	fmt.Sprintf("connect string %s\n", cStr)
-	dbh, err := sql.Open("pgx", cStr)
-	if err != nil {
-		return dbh, err
-	}
-	if err := dbh.Ping(); err != nil {
-		logrus.Errorf("connect string %s\n", cStr)
-		logrus.Errorf("error in ping %s", err)
-		panic(err.Error())
-	}
-	return dbh, nil
+	return sql.Open("pgx", cStr)
 }
 
 func getPgWrapper(c *cli.Context) (*runner.DB, error) {
