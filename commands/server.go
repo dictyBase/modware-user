@@ -109,10 +109,7 @@ func RunUserServer(c *cli.Context) error {
 		c.String("dictyuser-port"),
 		c.String("dictyuser-db"),
 	)
-	return cli.NewExitError(
-		fmt.Sprintf("database connection %s\n", cStr),
-		2,
-	)
+	fmt.Println(cStr)
 	dbh, err := getPgWrapper(c)
 	if err != nil {
 		return cli.NewExitError(
@@ -274,7 +271,6 @@ func getPgxDbHandler(c *cli.Context) (*sql.DB, error) {
 	)
 	logrus.Errorf("connect string %s\n", cStr)
 	fmt.Sprintf("connect string %s\n", cStr)
-	panic(fmt.Sprintf("connect string %s\n", cStr))
 	dbh, err := sql.Open("pgx", cStr)
 	if err != nil {
 		return dbh, err
