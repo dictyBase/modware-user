@@ -47,10 +47,11 @@
   name = "github.com/dictyBase/go-genproto"
   packages = [
     "dictybaseapis/api/jsonapi",
+    "dictybaseapis/identity",
     "dictybaseapis/pubsub",
     "dictybaseapis/user"
   ]
-  revision = "082a006471f4bb2c2d3be2c4a8e478be75d7f55e"
+  revision = "87ff159437dfacdff27c937ffd985240c6136efb"
 
 [[projects]]
   name = "github.com/docker/distribution"

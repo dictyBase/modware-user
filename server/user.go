@@ -147,6 +147,10 @@ func NewUserService(dbh *runner.DB, opt ...aphgrpc.Option) *UserService {
 	return &UserService{srv}
 }
 
+func (s *UserService) Healthz(ctx context.Context, r *jsonapi.HealthzIdRequest) (*empty.Empty, error) {
+	return &empty.Empty{}, nil
+}
+
 func (s *UserService) ExistUser(ctx context.Context, r *jsonapi.IdRequest) (*jsonapi.ExistResponse, error) {
 	found, err := s.existsResource(r.Id)
 	return &jsonapi.ExistResponse{Exist: found}, err
