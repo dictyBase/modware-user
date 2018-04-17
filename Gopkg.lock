@@ -40,7 +40,7 @@
     "aphfile",
     "aphgrpc"
   ]
-  revision = "73489ed3dc19cbe9ec93723cf66db7aee9bc66c6"
+  revision = "6851b6e8b47980a8360f31bdfdc618baaaf60d95"
 
 [[projects]]
   branch = "master"

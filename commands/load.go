@@ -101,7 +101,7 @@ func LoadUser(c *cli.Context) error {
 		ustatus, err := findOrCreateUser(client, record)
 		if err != nil {
 			return cli.NewExitError(
-				fmt.Sprintf("error in finding or creating user", err),
+				fmt.Sprintf("error in finding or creating user %s %s", record[0], err),
 				2,
 			)
 		}
@@ -109,13 +109,16 @@ func LoadUser(c *cli.Context) error {
 			err := updateUser(client, ustatus)
 			if err != nil {
 				return cli.NewExitError(
-					fmt.Sprintf("error in updating user %s\n", err),
+					fmt.Sprintf("error in updating user %s %s", record[0], err),
 					2,
 				)
 			}
 			updated++
 			total++
+			log.Debugf("updated record with email %s\n", record[0])
 			continue
+		} else {
+			log.Debugf("created record with email %s\n", record[0])
 		}
 		inserted++
 		total++
