@@ -1,0 +1,72 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: "{{ template "fullname" . }}-users"
+  labels:
+    draft: {{ default "draft-app" .Values.draft }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      annotations:
+        buildID: {{ .Values.buildID }}
+      labels:
+        draft: {{ default "draft-app" .Values.draft }}
+        app: {{ template "fullname" . }}-users
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}-users
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [
+            "--log-level",
+            "{{ .Values.logLevel }}",
+            "start-user-server",
+            "--dictyuser-pass",
+            $(DICTYUSER_PASSWORD),
+            "--dictyuser-db",
+            $(DICTYUSER_DB),
+            "--dictyuser-user", 
+            $(DICTYUSER_USER),
+            "--user-api-http-host",
+            $(USER_API_HTTP_HOST)
+            "--port",
+            "{{ .Values.service.users.port }}"
+          ]
+          env:
+          - name: USER_API_HTTP_HOST
+            value: {{ .Values.apiHost }}
+          - name: DICTYUSER_DB
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictyContentPostgres.configMap.name }}"
+                key: "{{ .Values.dictyContentPostgres.configMap.database }}"
+          - name: DICTYUSER_USER
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Values.dictyContentPostgres.configMap.name }}"
+                key: "{{ .Values.dictyContentPostgres.configMap.user }}"
+          - name: DICTYUSER_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Values.dictyContentPostgres.secrets.name }}"
+                key: "{{ .Values.dictyContentPostgres.secrets.password }}"
+          ports:
+          - name: {{ .Values.service.users.name }}
+            containerPort: {{ .Values.service.users.port }}
+          #livenessProbe:
+            #httpGet:
+              #path: "{{ .Values.healthCheck.path }}"
+              #port: {{ .Values.service.port }}
+            #initialDelaySeconds: {{ .Values.healthCheck.delay }}
+      {{- if .Values.resources }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      {{- end }}
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}

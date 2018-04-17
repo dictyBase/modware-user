@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.users.name }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    app: {{ template "fullname" . }}-users
+spec:
+  type: {{ .Values.service.users.type }}
+  ports:
+  - name: {{ .Values.service.users.name }}  
+    port: {{ .Values.service.users.port  }}
+    targetPort: {{ .Values.service.users.name }}   
+  selector:
+    app: {{ template "fullname" . }}-users
+...
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.roles.name }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    app: {{ template "fullname" . }}-roles
+spec:
+  type: {{ .Values.service.roles.type }}
+  ports:
+  - name: {{ .Values.service.roles.name }}  
+    port: {{ .Values.service.roles.port  }}
+    targetPort: {{ .Values.service.roles.name }}   
+  selector:
+    app: {{ template "fullname" . }}-roles
+
+...
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.permissions.name }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    app: {{ template "fullname" . }}-permissions
+spec:
+  type: {{ .Values.service.permissions.type }}
+  ports:
+  - name: {{ .Values.service.permissions.name }}  
+    port: {{ .Values.service.permissions.port  }}
+    targetPort: {{ .Values.service.permissions.name }}   
+  selector:
+    app: {{ template "fullname" . }}-permissions

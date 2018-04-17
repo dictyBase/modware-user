@@ -1,0 +1,53 @@
+# Default values for golang.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+replicaCount: 1
+image:
+  repository: dictybase/modware-user
+  tag: dev
+  pullPolicy: Always
+# ConfigMaps and secrets keys for configuring backend database access.
+# It should match the configMaps, secrets and their key names deployed with
+# dictycontent-postgres chart.
+dictyContentPostgres:
+  configMap:
+    name: dictycontent-postgres
+    user: dictyuser.user
+    database: dictyuser.database
+  secrets:
+    name: dictycontent-postgres
+    password: dictyuser.password
+service:
+  users:
+    name: user-api
+    type: NodePort
+    port: 9596
+  roles:
+    name: role-api
+    type: NodePort
+    port: 9596
+  permissions:
+    name: permission-api
+    type: NodePort
+    port: 9596
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+nodeSelector: {}
+healthCheck:
+  # configure liveness probes for 
+  # container
+  path: "/healthz"
+  delay: 16
+# The hostname from which the api will be served
+apiHost: "http://localhost"
+# Level of log
+logLevel: debug
