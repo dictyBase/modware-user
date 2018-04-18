@@ -11,6 +11,7 @@ import (
 
 type natsReply struct {
 	econn *gnats.EncodedConn
+	sub   *gnats.Subscription
 }
 
 func NewReply(host, port string, options ...gnats.Option) (message.Reply, error) {
@@ -30,7 +31,7 @@ func (n *natsReply) Publish(subj string, urep *pubsub.UserReply) {
 }
 
 func (n *natsReply) Start(subj string, client message.UserClient, replyFn message.ReplyFn) error {
-	_, err := n.econn.Subscribe(subj, func(s, rep string, req *pubsub.IdRequest) {
+	sub, err := n.econn.Subscribe(subj, func(s, rep string, req *pubsub.IdRequest) {
 		n.Publish(rep, replyFn(s, client, req))
 	})
 	if err != nil {
@@ -42,10 +43,14 @@ func (n *natsReply) Start(subj string, client message.UserClient, replyFn messag
 	if err := n.econn.LastError(); err != nil {
 		return err
 	}
+	n.sub = sub
 	return nil
 }
 
 func (n *natsReply) Stop() error {
+	if n.sub != nil {
+		n.sub.Unsubscribe()
+	}
 	n.econn.Close()
 	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/pubsub"
@@ -21,10 +20,12 @@ import (
 func shutdown(r message.Reply, logger *logrus.Entry) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
-	logger.Errorf("received kill signal %s", <-ch)
+	<-ch
+	logger.Info("received kill signal")
 	if err := r.Stop(); err != nil {
 		logger.Fatalf("unable to close the subscription %s\n", err)
 	}
+	logger.Info("closed the connections gracefully")
 }
 
 func replyUser(subj string, c message.UserClient, req *pubsub.IdRequest) *pubsub.UserReply {
@@ -107,8 +108,7 @@ func RunUserReply(c *cli.Context) error {
 		)
 	}
 	logger := getLogger(c)
-	go shutdown(reply, logger)
 	logger.Info("starting the reply messaging backend")
-	runtime.Goexit()
+	shutdown(reply, logger)
 	return nil
 }
