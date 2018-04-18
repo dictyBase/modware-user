@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "load-users.fullname" . }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  template:
+    metadata:
+      name: {{ template "load-users.fullname" . }}
+      labels:
+        app: {{ template "load-users.fullname" . }}
+    spec:
+      containers:
+      - name: {{ template "load-users.fullname" . }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        args: [
+          "--log-level",
+          "info",
+          "load-users",
+          "--akey",
+          "{{ .Values.s3.access-key }}",
+          "--skey",
+          "{{ .Values.s3.secret-key }}"
+        ]
+      restartPolicy: Never
