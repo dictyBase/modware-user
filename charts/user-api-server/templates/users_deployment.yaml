@@ -32,13 +32,11 @@ spec:
             "--dictyuser-user", 
             $(DICTYUSER_USER),
             "--user-api-http-host",
-            $(USER_API_HTTP_HOST)
+            "{{ .Values.apiHost }}"
             "--port",
             "{{ .Values.service.users.port }}"
           ]
           env:
-          - name: USER_API_HTTP_HOST
-            value: {{ .Values.apiHost }}
           - name: DICTYUSER_DB
             valueFrom:
               configMapKeyRef:
