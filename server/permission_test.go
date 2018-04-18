@@ -84,13 +84,14 @@ func tearDownTest(t *testing.T) {
 	}
 }
 
-func NewPermission(perm string) *pb.CreatePermissionRequest {
+func NewPermission(perm, resource string) *pb.CreatePermissionRequest {
 	return &pb.CreatePermissionRequest{
 		Data: &pb.CreatePermissionRequest_Data{
 			Type: "permissions",
 			Attributes: &pb.PermissionAttributes{
 				Permission:  perm,
-				Description: fmt.Sprintf("Ability to do %s", perm),
+				Resource:    resource,
+				Description: fmt.Sprintf("Ability to do %s in %s", perm, resource),
 			},
 		},
 	}
@@ -104,7 +105,7 @@ func TestPermissionCreate(t *testing.T) {
 	}
 	defer conn.Close()
 	client := pb.NewPermissionServiceClient(conn)
-	nperm, err := client.CreatePermission(context.Background(), NewPermission("create"))
+	nperm, err := client.CreatePermission(context.Background(), NewPermission("create", "literature"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -117,6 +118,9 @@ func TestPermissionCreate(t *testing.T) {
 	if nperm.Data.Attributes.Permission != "create" {
 		t.Fatalf("Expected value of attribute permission did not match %s", nperm.Data.Attributes.Permission)
 	}
+	if nperm.Data.Attributes.Resource != "literature" {
+		t.Fatalf("Expected value of resource did not match %s", nperm.Data.Attributes.Resource)
+	}
 }
 
 func TestPermissionGet(t *testing.T) {
@@ -127,7 +131,7 @@ func TestPermissionGet(t *testing.T) {
 	}
 	defer conn.Close()
 	client := pb.NewPermissionServiceClient(conn)
-	nperm, err := client.CreatePermission(context.Background(), NewPermission("get"))
+	nperm, err := client.CreatePermission(context.Background(), NewPermission("get", "genome"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -145,8 +149,8 @@ func TestPermissionGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not retrieve permission with id %d", nperm.Data.Id)
 	}
-	if len(efperm.Data.Attributes.Description) != 0 {
-		t.Fatalf("expecting nil but retrieved %s\n", efperm.Data.Attributes.Description)
+	if len(efperm.Data.Attributes.Resource) != 0 {
+		t.Fatalf("expecting nil but retrieved %s\n", efperm.Data.Attributes.Resource)
 	}
 	if m, _ := regexp.MatchString("fields=permission", efperm.Links.Self); !m {
 		t.Fatalf("expected link %s does not contain fields query parameter", efperm.Links.Self)
@@ -164,7 +168,7 @@ func TestPermissionGetAllWithFields(t *testing.T) {
 	for _, pt := range []string{"get", "create", "edit", "delete", "admin"} {
 		_, err := client.CreatePermission(
 			context.Background(),
-			NewPermission(pt),
+			NewPermission(pt, "strain"),
 		)
 		if err != nil {
 			t.Fatalf("could not store the permission %s\n", err)
@@ -204,7 +208,7 @@ func TestPermissionGetAll(t *testing.T) {
 	for _, pt := range []string{"get", "create", "edit", "delete", "admin"} {
 		_, err := client.CreatePermission(
 			context.Background(),
-			NewPermission(pt),
+			NewPermission(pt, "genotype"),
 		)
 		if err != nil {
 			t.Fatalf("could not store the permission %s\n", err)
@@ -224,6 +228,9 @@ func TestPermissionGetAll(t *testing.T) {
 		if perm.Links.Self != fmt.Sprintf("/permissions/%d", perm.Id) {
 			t.Fatalf("expected link does not match %s\n", perm.Links.Self)
 		}
+		if perm.Attributes.Resource != "genotype" {
+			t.Fatalf("expected resource does not match %s\n", perm.Attributes.Resource)
+		}
 	}
 }
 
@@ -238,7 +245,7 @@ func TestPermissionGetAllWithFieldsAndFilter(t *testing.T) {
 	for _, pt := range []string{"get", "create", "edit", "delete", "admin"} {
 		_, err := client.CreatePermission(
 			context.Background(),
-			NewPermission(pt),
+			NewPermission(pt, "goa"),
 		)
 		if err != nil {
 			t.Fatalf("could not store the permission %s\n", err)
@@ -302,7 +309,7 @@ func TestPermissionUpdate(t *testing.T) {
 	}
 	defer conn.Close()
 	client := pb.NewPermissionServiceClient(conn)
-	nperm, err := client.CreatePermission(context.Background(), NewPermission("edit"))
+	nperm, err := client.CreatePermission(context.Background(), NewPermission("edit", "frontpage"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -338,7 +345,7 @@ func TestPermissionDelete(t *testing.T) {
 	}
 	defer conn.Close()
 	client := pb.NewPermissionServiceClient(conn)
-	nperm, err := client.CreatePermission(context.Background(), NewPermission("delete"))
+	nperm, err := client.CreatePermission(context.Background(), NewPermission("delete", "genotype"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}

@@ -28,11 +28,13 @@ var permissionCols = []string{
 	"description",
 	"created_at",
 	"updated_at",
+	"resource",
 }
 
 type dbPermission struct {
 	AuthPermissionId dat.NullInt64  `db:"auth_permission_id"`
 	Permission       string         `db:"permission"`
+	Resource         string         `db:"resource"`
 	Description      dat.NullString `db:"description"`
 	CreatedAt        dat.NullTime   `db:"created_at"`
 	UpdatedAt        dat.NullTime   `db:"updated_at"`
@@ -48,15 +50,17 @@ func permissionServiceOptions() *aphgrpc.ServiceOptions {
 		PathPrefix: "permissions",
 		FilToColumns: map[string]string{
 			"permission":  fmt.Sprintf("%s.permission", permDbTable),
+			"resource":    fmt.Sprintf("%s.resource", permDbTable),
 			"description": fmt.Sprintf("%s.description", permDbTable),
 		},
 		FieldsToColumns: map[string]string{
 			"permission":  fmt.Sprintf("%s.permission", permDbTable),
+			"resource":    fmt.Sprintf("%s.resource", permDbTable),
 			"description": fmt.Sprintf("%s.description", permDbTable),
 			"created_at":  fmt.Sprintf("%s.created_at", permDbTable),
 			"updated_at":  fmt.Sprintf("%s.updated_at", permDbTable),
 		},
-		ReqAttrs: []string{"Permission"},
+		ReqAttrs: []string{"Permission", "Resource"},
 	}
 }
 
@@ -319,6 +323,7 @@ func (s *PermissionService) buildResource(ctx context.Context, id int64, attr *u
 func (s *PermissionService) dbToResourceAttributes(dperm *dbPermission) *user.PermissionAttributes {
 	return &user.PermissionAttributes{
 		Permission:  dperm.Permission,
+		Resource:    dperm.Resource,
 		Description: aphgrpc.NullToString(dperm.Description),
 		CreatedAt:   aphgrpc.NullToTime(dperm.CreatedAt),
 		UpdatedAt:   aphgrpc.NullToTime(dperm.UpdatedAt),
@@ -328,6 +333,7 @@ func (s *PermissionService) dbToResourceAttributes(dperm *dbPermission) *user.Pe
 func (s *PermissionService) attrTodbPermission(attr *user.PermissionAttributes) *dbPermission {
 	return &dbPermission{
 		Permission:  attr.Permission,
+		Resource:    attr.Resource,
 		Description: dat.NullStringFrom(attr.Description),
 		CreatedAt:   dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.CreatedAt)),
 		UpdatedAt:   dat.NullTimeFrom(aphgrpc.ProtoTimeStamp(attr.UpdatedAt)),

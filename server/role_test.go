@@ -139,7 +139,7 @@ func TestRoleCreateWithPermission(t *testing.T) {
 	defer conn.Close()
 
 	permClient := pb.NewPermissionServiceClient(conn)
-	perm, err := permClient.CreatePermission(context.Background(), NewPermission("create"))
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("create", "genome"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -175,11 +175,11 @@ func TestRoleUpdateWithPermission(t *testing.T) {
 	defer conn.Close()
 
 	permClient := pb.NewPermissionServiceClient(conn)
-	cperm, err := permClient.CreatePermission(context.Background(), NewPermission("create"))
+	cperm, err := permClient.CreatePermission(context.Background(), NewPermission("create", "phenotype"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
-	dperm, err := permClient.CreatePermission(context.Background(), NewPermission("destroy"))
+	dperm, err := permClient.CreatePermission(context.Background(), NewPermission("destroy", "genotype"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -283,7 +283,7 @@ func TestRoleGetWithFieldsAndInclude(t *testing.T) {
 	defer conn.Close()
 
 	permClient := pb.NewPermissionServiceClient(conn)
-	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch"))
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch", "notes"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -444,7 +444,7 @@ func TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
 	defer conn.Close()
 
 	permClient := pb.NewPermissionServiceClient(conn)
-	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch"))
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch", "strain"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -518,7 +518,7 @@ func TestRoleCreatePermissionRelationship(t *testing.T) {
 	defer conn.Close()
 
 	permClient := pb.NewPermissionServiceClient(conn)
-	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch"))
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("fetch", "order"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -572,7 +572,7 @@ func TestRoleUpdatePermissionRelationship(t *testing.T) {
 	defer conn.Close()
 
 	permClient := pb.NewPermissionServiceClient(conn)
-	perm, err := permClient.CreatePermission(context.Background(), NewPermission("create"))
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("create", "gene"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -582,7 +582,7 @@ func TestRoleUpdatePermissionRelationship(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not store the role %s\n", err)
 	}
-	uperm, err := permClient.CreatePermission(context.Background(), NewPermission("update"))
+	uperm, err := permClient.CreatePermission(context.Background(), NewPermission("update", "pathway"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -636,7 +636,7 @@ func TestRoleDeletePermissionRelationship(t *testing.T) {
 	defer conn.Close()
 
 	permClient := pb.NewPermissionServiceClient(conn)
-	perm, err := permClient.CreatePermission(context.Background(), NewPermission("delete"))
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("delete", "frontpage"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
@@ -672,7 +672,7 @@ func TestRoleGetPermissionRelationship(t *testing.T) {
 	defer conn.Close()
 
 	permClient := pb.NewPermissionServiceClient(conn)
-	perm, err := permClient.CreatePermission(context.Background(), NewPermission("get"))
+	perm, err := permClient.CreatePermission(context.Background(), NewPermission("get", "wiki"))
 	if err != nil {
 		t.Fatalf("could not store the permission %s\n", err)
 	}
