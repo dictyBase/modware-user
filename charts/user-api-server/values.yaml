@@ -51,3 +51,8 @@ healthCheck:
 apiHost: "http://localhost"
 # Level of log
 logLevel: debug
+
+# Type of pubsub service that will be running
+# alongside
+pubsub:
+  name: reply
