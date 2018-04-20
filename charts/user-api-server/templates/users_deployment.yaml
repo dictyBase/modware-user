@@ -32,7 +32,7 @@ spec:
             "--dictyuser-user", 
             $(DICTYUSER_USER),
             "--user-api-http-host",
-            "{{ .Values.apiHost }}"
+            "{{ .Values.apiHost }}",
             "--port",
             "{{ .Values.service.users.port }}"
           ]

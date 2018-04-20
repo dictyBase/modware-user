@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ template "user-api.fullname" . }}-{{ .Values.pubsub.name }}
+  name: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
   labels:
-    app: {{ template "user-api.fullname" . }}-{{ .Values.pubsub.name }}
+    app: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
 spec:
   containers:
-  - name: {{ .Chart.name }}-{{ .Values.pubsub.name }}
+  - name: "{{ .Chart.Name }}-{{ .Values.pubsub.name }}"
     image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
     imagePullPolicy: {{ .Values.image.pullPolicy }}
     args: [

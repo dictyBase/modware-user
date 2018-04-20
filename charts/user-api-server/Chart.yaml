@@ -1,7 +1,7 @@
 apiVersion: v1
 description: A Helm chart for Kubernetes to run user api server.
 name: user-api-server
-version: 0.0.1
+version: 0.0.2
 sources:
   - https://hub.docker.com/r/dictybase/modware-user
   - https://github.com/dictyBase/modware-user
