@@ -51,7 +51,7 @@
     "dictybaseapis/pubsub",
     "dictybaseapis/user"
   ]
-  revision = "046f5e72102942f549bc9a67339a4c690557d4e2"
+  revision = "fb30be4646f8bddd11e2b55e2c0b72eadcabe2d5"
 
 [[projects]]
   name = "github.com/docker/distribution"
