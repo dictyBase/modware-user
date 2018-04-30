@@ -1,0 +1,26 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
+  labels:
+    app: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
+    spec:
+      containers:
+      - name: "{{ .Chart.Name }}-{{ .Values.pubsub.name }}"
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args: [
+          "--log-level",
+          "info",
+          "start-user-reply"
+        ]
+

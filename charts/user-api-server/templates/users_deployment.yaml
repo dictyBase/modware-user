@@ -3,18 +3,14 @@ kind: Deployment
 metadata:
   name: "{{ template "fullname" . }}-users"
   labels:
-    draft: {{ default "draft-app" .Values.draft }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   template:
     metadata:
-      annotations:
-        buildID: {{ .Values.buildID }}
       labels:
-        draft: {{ default "draft-app" .Values.draft }}
         app: {{ template "fullname" . }}-users
     spec:
       containers:
@@ -58,7 +54,7 @@ spec:
           livenessProbe:
             httpGet:
               path: {{ .Values.healthCheck.path }}
-              port: {{ .Values.service.port }}
+              port: {{ .Values.service.users.port }}
             initialDelaySeconds: {{ .Values.healthCheck.delay }}
       {{- if .Values.resources }}
           resources:
