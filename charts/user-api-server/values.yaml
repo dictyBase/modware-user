@@ -45,7 +45,7 @@ nodeSelector: {}
 healthCheck:
   # configure liveness probes for 
   # container
-  path: "/healthz"
+  path: "/users/healthz"
   delay: 16
 # The hostname from which the api will be served
 apiHost: "http://localhost"
