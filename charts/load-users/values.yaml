@@ -7,5 +7,5 @@ image:
   pullPolicy: IfNotPresent
 # Keys for accessing data in s3(minio) storage
 #s3:
-  #access-key:
-  #secret-key:
+  #accessKey:
+  #secretKey:

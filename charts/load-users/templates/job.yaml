@@ -22,8 +22,8 @@ spec:
           "info",
           "load-users",
           "--akey",
-          "{{ .Values.s3.access-key }}",
+          "{{ .Values.s3.accessKey }}",
           "--skey",
-          "{{ .Values.s3.secret-key }}"
+          "{{ .Values.s3.secretKey }}"
         ]
       restartPolicy: Never
