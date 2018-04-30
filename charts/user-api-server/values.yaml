@@ -4,7 +4,7 @@
 replicaCount: 1
 image:
   repository: dictybase/modware-user
-  tag: 0.0.1
+  tag: 0.1.0
   pullPolicy: IfNotPresent
 # ConfigMaps and secrets keys for configuring backend database access.
 # It should match the configMaps, secrets and their key names deployed with
