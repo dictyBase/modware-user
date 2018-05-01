@@ -1,4 +1,4 @@
 apiVersion: v1
 description: A Helm chart for loading dictybase users(colleague) 
 name: load-users
-version: 0.0.3
+version: 0.0.4
