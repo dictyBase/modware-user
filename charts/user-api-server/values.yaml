@@ -4,7 +4,7 @@
 replicaCount: 1
 image:
   repository: dictybase/modware-user
-  tag: 0.1.0
+  tag: 0.2.0
   pullPolicy: IfNotPresent
 # ConfigMaps and secrets keys for configuring backend database access.
 # It should match the configMaps, secrets and their key names deployed with
@@ -45,8 +45,9 @@ nodeSelector: {}
 healthCheck:
   # configure liveness probes for 
   # container
-  path: "/users/healthz"
-  delay: 16
+  path: "/healthz"
+  initial: 15
+  period: 60
 # The hostname from which the api will be served
 apiHost: "http://localhost"
 # Level of log
