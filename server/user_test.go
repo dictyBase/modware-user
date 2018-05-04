@@ -541,6 +541,20 @@ func TestGetAllUsersWithFilter(t *testing.T) {
 	if m, _ := regexp.MatchString("pagenum=4&pagesize=5", fusers.Links.Last); !m {
 		t.Fatalf("expected last link does not match %s", fusers.Links.Last)
 	}
+	for _, user := range fusers.Data {
+		if user.Id < 1 {
+			t.Fatalf("expected id does not match %d\n", user.Id)
+		}
+		if user.Links.Self != fmt.Sprintf("/users/%d", user.Id) {
+			t.Fatalf("expected link does not match %s\n", user.Links.Self)
+		}
+		if user.Attributes.Country != "US" {
+			t.Fatalf("expected country does not match %s", user.Attributes.Country)
+		}
+		if user.Attributes.Phone != "435-234-8791" {
+			t.Fatalf("expected value of phone does not match %s", user.Attributes.Phone)
+		}
+	}
 	page := fusers.Meta.Pagination
 	if page.Records != 20 {
 		t.Logf("expected total no of records does not match %d\n", page.Records)
