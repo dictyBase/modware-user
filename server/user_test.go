@@ -371,6 +371,9 @@ func TestGetAllUsers(t *testing.T) {
 		if user.Links.Self != fmt.Sprintf("/users/%d", user.Id) {
 			t.Fatalf("expected link does not match %s\n", user.Links.Self)
 		}
+		if user.Attributes.Country != "US" {
+			t.Fatalf("expected country does not match %s", user.Attributes.Country)
+		}
 	}
 	page := lusers.Meta.Pagination
 	if page.Records != 28 {
@@ -402,6 +405,17 @@ func TestGetAllUsers(t *testing.T) {
 	if m, _ := regexp.MatchString("pagenum=2&pagesize=10", tusers.Links.Prev); !m {
 		t.Fatalf("expected link %s does not contain include query parameter", tusers.Links.Prev)
 	}
+	for _, user := range tusers.Data {
+		if user.Attributes.State != "TL" {
+			t.Fatalf("expected value of state does not match %s", user.Attributes.State)
+		}
+		if user.Id < 1 {
+			t.Fatalf("expected id does not match %d\n", user.Id)
+		}
+		if user.Links.Self != fmt.Sprintf("/users/%d", user.Id) {
+			t.Fatalf("expected link does not match %s\n", user.Links.Self)
+		}
+	}
 	tpage := tusers.Meta.Pagination
 	if tpage.Number != 3 {
 		t.Logf("expected page number does not match %d\n", tpage.Number)
@@ -423,6 +437,17 @@ func TestGetAllUsers(t *testing.T) {
 	}
 	if spage.Size != 5 {
 		t.Logf("expected page size does not match %d\n", spage.Size)
+	}
+	for _, user := range susers.Data {
+		if user.Attributes.City != "Tokurihm" {
+			t.Fatalf("expected value of city does not match %s", user.Attributes.City)
+		}
+		if user.Id < 1 {
+			t.Fatalf("expected id does not match %d\n", user.Id)
+		}
+		if user.Links.Self != fmt.Sprintf("/users/%d", user.Id) {
+			t.Fatalf("expected link does not match %s\n", user.Links.Self)
+		}
 	}
 
 	ausers, err := client.ListUsers(context.Background(), &jsonapi.ListRequest{Pagesize: 5, Pagenum: 2})
@@ -450,6 +475,20 @@ func TestGetAllUsers(t *testing.T) {
 	}
 	if apage.Total != 6 {
 		t.Logf("expected no of pages does not match %d\n", apage.Total)
+	}
+	for _, user := range ausers.Data {
+		if user.Attributes.Phone != "435-234-8791" {
+			t.Fatalf("expected value of phone does not match %s", user.Attributes.Phone)
+		}
+		if user.Id < 1 {
+			t.Fatalf("expected id does not match %d\n", user.Id)
+		}
+		if user.Links.Self != fmt.Sprintf("/users/%d", user.Id) {
+			t.Fatalf("expected link does not match %s\n", user.Links.Self)
+		}
+		if user.Attributes.City != "Tokurihm" {
+			t.Fatalf("expected value of city does not match %s", user.Attributes.City)
+		}
 	}
 	musers, err := client.ListUsers(context.Background(), &jsonapi.ListRequest{Pagesize: 5, Pagenum: 6})
 	if err != nil {

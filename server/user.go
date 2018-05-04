@@ -28,6 +28,8 @@ const (
 				auth_user.first_name,
 				auth_user.last_name,
 				auth_user.is_active,
+				auth_user.created_at,
+				auth_user.updated_at,
 				auth_user_info.*
 			FROM auth_user
 		`
@@ -325,7 +327,7 @@ func (s *UserService) ListUsers(ctx context.Context, r *jsonapi.ListRequest) (*u
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
-			dbUsers, err := s.getAllSelectedRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
+			dbUsers, err := s.getAllRowsWithPaging(lctx, r.Pagenum, r.Pagesize)
 			if err != nil {
 				return &user.UserCollection{}, aphgrpc.HandleError(ctx, err)
 			}
@@ -987,6 +989,7 @@ func (s *UserService) attrTodbUserInfo(attr *user.UserAttributes) *dbUserInfo {
 		State:         dat.NullStringFrom(attr.State),
 		Zipcode:       dat.NullStringFrom(attr.Zipcode),
 		Country:       dat.NullStringFrom(attr.Country),
+		Phone:         dat.NullStringFrom(attr.Phone),
 	}
 }
 
