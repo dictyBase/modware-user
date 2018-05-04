@@ -634,6 +634,12 @@ func TestGetAllUsersWithRoles(t *testing.T) {
 				nrole.Data.Id,
 			)
 		}
+		if user.Attributes.Country != "US" {
+			t.Fatalf("expected country does not match %s", user.Attributes.Country)
+		}
+		if user.Attributes.Phone != "435-234-8791" {
+			t.Fatalf("expected value of phone does not match %s", user.Attributes.Phone)
+		}
 		counter++
 	}
 	if counter != len(fusers.Included) {
