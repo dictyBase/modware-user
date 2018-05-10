@@ -492,6 +492,9 @@ func (s *UserService) CreateUser(ctx context.Context, r *user.CreateUserRequest)
 }
 
 func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if len(r.Data) == 0 {
+		return &empty.Empty{}, aphgrpc.HandleInsertArgError(ctx, fmt.Errorf("no id given"))
+	}
 	result, err := s.existsResource(r.Id)
 	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
@@ -517,7 +520,14 @@ func (s *UserService) CreateRoleRelationship(ctx context.Context, r *jsonapi.Dat
 				grpc.SetTrailer(ctx, aphgrpc.ErrDatabaseInsert)
 				return &empty.Empty{}, status.Error(codes.Internal, err.Error())
 			}
+		} else {
+			return &empty.Empty{},
+				aphgrpc.HandleExistError(
+					ctx,
+					fmt.Errorf("relationship with given id %d already exists", rd.Id),
+				)
 		}
+
 	}
 	grpc.SetTrailer(ctx, metadata.Pairs("method", "POST_NO_CONTENT"))
 	return &empty.Empty{}, nil
@@ -580,6 +590,9 @@ func (s *UserService) UpdateUser(ctx context.Context, r *user.UpdateUserRequest)
 }
 
 func (s *UserService) UpdateRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if len(r.Data) == 0 {
+		return &empty.Empty{}, aphgrpc.HandleInsertArgError(ctx, fmt.Errorf("no id given"))
+	}
 	result, err := s.existsResource(r.Id)
 	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
@@ -625,6 +638,9 @@ func (s *UserService) DeleteUser(ctx context.Context, r *jsonapi.DeleteRequest) 
 }
 
 func (s *UserService) DeleteRoleRelationship(ctx context.Context, r *jsonapi.DataCollection) (*empty.Empty, error) {
+	if len(r.Data) == 0 {
+		return &empty.Empty{}, aphgrpc.HandleInsertArgError(ctx, fmt.Errorf("no id given"))
+	}
 	result, err := s.existsResource(r.Id)
 	if err != nil {
 		return &empty.Empty{}, aphgrpc.HandleError(ctx, err)
