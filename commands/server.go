@@ -12,6 +12,7 @@ import (
 	"github.com/dictyBase/apihelpers/aphgrpc"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/dictyBase/modware-user/server"
+	"github.com/go-chi/cors"
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -70,8 +71,15 @@ func RunRoleServer(c *cli.Context) error {
 	// match gRPC requests, otherwise regular HTTP requests
 	grpcL := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
 	httpL := m.Match(cmux.Any())
-
-	httpS := &http.Server{Handler: httpMux}
+	// CORS setup
+	cors := cors.New(cors.Options{
+		AllowedOrigins:     []string{"*"},
+		AllowCredentials:   true,
+		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		OptionsPassthrough: false,
+		AllowedHeaders:     []string{"*"},
+	})
+	httpS := &http.Server{Handler: cors.Handler(httpMux)}
 	// collect on this channel the exits of each protocol's .Serve() call
 	ech := make(chan error, 2)
 	// start the listeners for each protocol
@@ -146,8 +154,15 @@ func RunUserServer(c *cli.Context) error {
 	// match gRPC requests, otherwise regular HTTP requests
 	grpcL := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
 	httpL := m.Match(cmux.Any())
-
-	httpS := &http.Server{Handler: httpMux}
+	// CORS setup
+	cors := cors.New(cors.Options{
+		AllowedOrigins:     []string{"*"},
+		AllowCredentials:   true,
+		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		OptionsPassthrough: false,
+		AllowedHeaders:     []string{"*"},
+	})
+	httpS := &http.Server{Handler: cors.Handler(httpMux)}
 	// collect on this channel the exits of each protocol's .Serve() call
 	ech := make(chan error, 2)
 	// start the listeners for each protocol
@@ -223,7 +238,15 @@ func RunPermissionServer(c *cli.Context) error {
 	grpcL := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
 	httpL := m.Match(cmux.Any())
 
-	httpS := &http.Server{Handler: httpMux}
+	// CORS setup
+	cors := cors.New(cors.Options{
+		AllowedOrigins:     []string{"*"},
+		AllowCredentials:   true,
+		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		OptionsPassthrough: false,
+		AllowedHeaders:     []string{"*"},
+	})
+	httpS := &http.Server{Handler: cors.Handler(httpMux)}
 	// collect on this channel the exits of each protocol's .Serve() call
 	ech := make(chan error, 2)
 	// start the listeners for each protocol
