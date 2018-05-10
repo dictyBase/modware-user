@@ -51,7 +51,7 @@
     "dictybaseapis/pubsub",
     "dictybaseapis/user"
   ]
-  revision = "c875deaa60d6f160a462d41b0f9e233e436c1dbe"
+  revision = "ea2ef7bdf75339aed2cf51a129955a71892e1641"
 
 [[projects]]
   name = "github.com/docker/distribution"
@@ -138,7 +138,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/golang/protobuf"
   packages = [
     "jsonpb",
@@ -151,7 +150,8 @@
     "ptypes/struct",
     "ptypes/timestamp"
   ]
-  revision = "e09c5db296004fbe3f74490e84dcd62c3c5ddb1b"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -167,14 +167,14 @@
   revision = "bc372cc64f55abd91995ba3f219b380ffbc59e9d"
 
 [[projects]]
+  branch = "master"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "runtime",
     "runtime/internal",
     "utilities"
   ]
-  revision = "07f5e79768022f9a3265235f0db4ac8c3f675fec"
-  version = "v1.3.1"
+  revision = "a53af079f669b6375dd96cdf5e98e67f886a8b4d"
 
 [[projects]]
   name = "github.com/jackc/pgx"
@@ -445,6 +445,7 @@
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
+    "channelz",
     "codes",
     "connectivity",
     "credentials",
@@ -467,8 +468,8 @@
     "tap",
     "transport"
   ]
-  revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
-  version = "v1.10.0"
+  revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
+  version = "v1.12.0"
 
 [[projects]]
   branch = "v2"
@@ -557,6 +558,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "42641b343350e8332b2f814098fc528914cd67298f6ce6fbfedfcd041f692159"
+  inputs-digest = "c2de574e045e3e1947a31abc9d2898a78bad752e734278d14ce8a93513af1db4"
   solver-name = "gps-cdcl"
   solver-version = 1
