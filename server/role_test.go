@@ -509,6 +509,59 @@ func TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
 	}
 }
 
+func TestRoleCreateUserRelationship(t *testing.T) {
+	defer tearDownTest(t)
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("could not connect to grpc server %s\n", err)
+	}
+	defer conn.Close()
+	uclient := pb.NewUserServiceClient(conn)
+	nuser, err := uclient.CreateUser(context.Background(), NewUser("todd@gad.org"))
+	if err != nil {
+		t.Fatalf("could not store the user %s\n", err)
+	}
+
+	client := pb.NewRoleServiceClient(conn)
+	nrole, err := client.CreateRole(context.Background(), NewRole("fetcher"))
+	if err != nil {
+		t.Fatalf("could not store the role %s\n", err)
+	}
+	_, err = client.CreateUserRelationship(
+		context.Background(),
+		&jsonapi.DataCollection{
+			Id:   nrole.Data.Id,
+			Data: []*jsonapi.Data{&jsonapi.Data{Type: "users", Id: nuser.Data.Id}},
+		},
+	)
+	if err != nil {
+		t.Fatalf("could not create the relationship with user %s\n", err)
+	}
+	grole, err := client.GetRole(
+		context.Background(),
+		&jsonapi.GetRequest{Id: nrole.Data.Id, Include: "users"},
+	)
+	if err != nil {
+		t.Fatalf("could not fetch the role %s\n", err)
+	}
+	for _, a := range grole.Included {
+		uData := &pb.UserData{}
+		if err := ptypes.UnmarshalAny(a, uData); err != nil {
+			t.Fatalf("error in unmarshaling any types %s\n", err)
+		} else {
+			if uData.Id != nuser.Data.Id {
+				t.Fatalf("expected id does not match with %s\n", uData.Id)
+			}
+			if uData.Links.Self != nuser.Links.Self {
+				t.Fatalf("expected link does not match with %s\n", uData.Links.Self)
+			}
+			if uData.Attributes.Email != nuser.Data.Attributes.Email {
+				t.Fatalf("expected permission does not match with %s\n", uData.Attributes.Email)
+			}
+		}
+	}
+}
+
 func TestRoleCreatePermissionRelationship(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())

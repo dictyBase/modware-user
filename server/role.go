@@ -645,13 +645,22 @@ func (s *RoleService) getRelatedUsersCount(id int64) (int64, error) {
 func (s *RoleService) getUserResourceData(id int64) ([]*user.UserData, error) {
 	var dbrows []*dbUser
 	var udata []*user.UserData
-	err := s.Dbh.Select("user.*", "uinfo.*").From(`
-		auth_user_role
-		JOIN auth_user user
-		ON auth_user_role.auth_user_id = user.auth_user_id
-		JOIN auth_user_info uinfo
-		ON uinfo.auth_user_id = user.auth_user_id
-	`).Where("auth_user_role.auth_role_id = $1", id).
+	err := s.Dbh.SQL(`
+			SELECT
+				auth_user.auth_user_id,
+				CAST(auth_user.email AS TEXT),
+				auth_user.first_name,
+				auth_user.last_name,
+				auth_user.is_active,
+				auth_user.created_at,
+				auth_user.updated_at,
+				uinfo.*
+				FROM auth_user_role
+				JOIN auth_user
+				ON auth_user_role.auth_user_id = auth_user.auth_user_id
+				JOIN auth_user_info uinfo
+				ON uinfo.auth_user_id = auth_user.auth_user_id
+				WHERE auth_user_role.auth_role_id = $1`, id).
 		QueryStructs(&dbrows)
 	if err != nil {
 		return udata, err
