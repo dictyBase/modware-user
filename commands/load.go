@@ -15,7 +15,7 @@ import (
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"google.golang.org/grpc"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 type UserStatus struct {
@@ -124,6 +124,14 @@ func LoadUser(c *cli.Context) error {
 		total++
 	}
 	log.Infof("records total:%d new:%d updated%d", total, inserted, updated)
+	g, err := client.GetUser(context.Background(), &jsonapi.GetRequest{Id: 1})
+	if err != nil {
+		log.Errorf("Error in getting user by ID %d: %s", 1, err)
+		return err
+	}
+	log.Infof("user email: %s", g.Data.Attributes.Email)
+	log.Infof("user first name: %s", g.Data.Attributes.FirstName)
+	log.Infof("user last name: %s", g.Data.Attributes.LastName)
 	return nil
 }
 
