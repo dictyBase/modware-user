@@ -79,7 +79,7 @@ func tearDownTest(t *testing.T) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
 		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
 		if err != nil {
-			t.Fatalf("unable to truncate table %s %s\n", t, err)
+			t.Fatalf("unable to truncate table %s %s\n", tbl, err)
 		}
 	}
 }
@@ -351,6 +351,6 @@ func TestPermissionDelete(t *testing.T) {
 	}
 	_, err = client.DeletePermission(context.Background(), &jsonapi.DeleteRequest{Id: nperm.Data.Id})
 	if err != nil {
-		t.Fatalf("could not delete resource with id %s", nperm.Data.Id)
+		t.Fatalf("could not delete resource with id %d", nperm.Data.Id)
 	}
 }

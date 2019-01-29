@@ -315,7 +315,7 @@ func TestGetUserWithRole(t *testing.T) {
 			t.Fatalf("error in unmarshaling any types %s\n", err)
 		} else {
 			if roleData.Id != nrole.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", roleData.Id)
+				t.Fatalf("expected id does not match with %d\n", roleData.Id)
 			}
 			if roleData.Links.Self != nrole.Links.Self {
 				t.Fatalf("expected link %s does not match with %s\n", nrole.Links.Self, roleData.Links.Self)
@@ -651,7 +651,7 @@ func TestGetAllUsersWithRoles(t *testing.T) {
 			t.Fatalf("error in unmarshaling any types %s\n", err)
 		} else {
 			if roleData.Id != nrole.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", roleData.Id)
+				t.Fatalf("expected id does not match with %d\n", roleData.Id)
 			}
 			if roleData.Links.Self != nrole.Links.Self {
 				t.Fatalf("expected link does not match with %s\n", roleData.Links.Self)
@@ -749,7 +749,7 @@ func TestUpdateRelatedRoles(t *testing.T) {
 			t.Fatalf("error in unmarshaling any types %s\n", err)
 		} else {
 			if roleData.Id != urole.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", roleData.Id)
+				t.Fatalf("expected id does not match with %d\n", roleData.Id)
 			}
 			if roleData.Links.Self != urole.Links.Self {
 				t.Fatalf("expected link does not match with %s\n", roleData.Links.Self)
