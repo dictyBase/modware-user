@@ -312,7 +312,7 @@ func TestRoleGetWithFieldsAndInclude(t *testing.T) {
 			t.Fatalf("error in unmarshaling any types %s\n", err)
 		} else {
 			if permData.Id != perm.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", permData.Id)
+				t.Fatalf("expected id does not match with %d\n", permData.Id)
 			}
 			if permData.Links.Self != perm.Links.Self {
 				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)
@@ -497,7 +497,7 @@ func TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
 			t.Fatalf("error in unmarshaling any types %s\n", err)
 		} else {
 			if permData.Id != perm.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", permData.Id)
+				t.Fatalf("expected id does not match with %d\n", permData.Id)
 			}
 			if permData.Links.Self != perm.Links.Self {
 				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)
@@ -550,7 +550,7 @@ func TestRoleCreateUserRelationship(t *testing.T) {
 			t.Fatalf("error in unmarshaling any types %s\n", err)
 		} else {
 			if uData.Id != nuser.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", uData.Id)
+				t.Fatalf("expected id does not match with %d\n", uData.Id)
 			}
 			if uData.Links.Self != nuser.Links.Self {
 				t.Fatalf("expected link does not match with %s\n", uData.Links.Self)
@@ -604,7 +604,7 @@ func TestRoleCreatePermissionRelationship(t *testing.T) {
 			t.Fatalf("error in unmarshaling any types %s\n", err)
 		} else {
 			if permData.Id != perm.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", permData.Id)
+				t.Fatalf("expected id does not match with %d\n", permData.Id)
 			}
 			if permData.Links.Self != perm.Links.Self {
 				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)
@@ -668,7 +668,7 @@ func TestRoleUpdatePermissionRelationship(t *testing.T) {
 			t.Fatalf("error in unmarshaling any types %s\n", err)
 		} else {
 			if permData.Id != uperm.Data.Id {
-				t.Fatalf("expected id does not match with %s\n", permData.Id)
+				t.Fatalf("expected id does not match with %d\n", permData.Id)
 			}
 			if permData.Links.Self != uperm.Links.Self {
 				t.Fatalf("expected link does not match with %s\n", permData.Links.Self)

@@ -42,7 +42,7 @@ func tearDownTest(t *testing.T) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
 		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
 		if err != nil {
-			t.Fatalf("unable to truncate table %s %s\n", t, err)
+			t.Fatalf("unable to truncate table %s %s\n", tbl, err)
 		}
 	}
 }
@@ -85,7 +85,7 @@ func NewUser(email string) *pb.CreateUserRequest {
 
 func TestMain(m *testing.M) {
 	// storage(postgresql connection)
-	pg, err := aphdocker.NewPgDocker()
+	pg, err := aphdocker.NewPgDockerWithImage("postgres:9.6.6-alpine")
 	if err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
@@ -236,7 +236,7 @@ func TestUserGetReply(t *testing.T) {
 		t.Fatalf("error in fetching user %s", status.ErrorProto(ruser.Status))
 	}
 	if ruser.User.Data.Id != nuser.Data.Id {
-		t.Fatalf("expected user id %s does not match %s", nuser.Data.Id, ruser.User.Data.Id)
+		t.Fatalf("expected user id %d does not match %d", nuser.Data.Id, ruser.User.Data.Id)
 	}
 	if nuser.Data.Attributes.Email != ruser.User.Data.Attributes.Email {
 		t.Fatalf("expected user email %s does not match %s", nuser.Data.Attributes.Email, ruser.User.Data.Attributes.Email)
