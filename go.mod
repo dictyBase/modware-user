@@ -49,7 +49,7 @@ require (
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/soheilhy/cmux v0.1.4
-	google.golang.org/grpc v1.18.0
+	google.golang.org/grpc v1.17.0
 	gopkg.in/ini.v1 v1.41.0 // indirect
 	gopkg.in/mgutz/dat.v2 v2.0.0-20171004160617-d76e4f81c4ef
 	gopkg.in/src-d/go-git.v4 v4.8.1 // indirect
