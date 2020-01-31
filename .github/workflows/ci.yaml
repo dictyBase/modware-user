@@ -15,6 +15,10 @@ jobs:
           POSTGRES_PASSWORD: pgdocker
         ports:
           - 5432/tcp
+      nats:
+        image: nats:1.0.6
+        ports:
+          - 4222/tcp
     steps:
       - name: set up golang
         uses: actions/setup-go@v1
@@ -30,6 +34,8 @@ jobs:
           POSTGRES_PASSWORD: pgdocker
           POSTGRES_HOST: localhost
           POSTGRES_PORT: ${{ job.services.postgres.ports[5432] }}
+          NATS_HOST: localhost
+          NATS_PORT: ${{ job.services.nats.ports[4222] }}
           GOPROXY: https://proxy.golang.org
       - name: upload coverage to codecov
         uses: codecov/codecov-action@v1.0.2
