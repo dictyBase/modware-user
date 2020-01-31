@@ -42,7 +42,7 @@ func runGRPCServer(db *sql.DB) {
 	if err != nil {
 		log.Fatalf("error listening to grpc port %s", err)
 	}
-	log.Printf("starting grpc server at port %s", grpcPort)
+	log.Printf("starting grpc server at port %s", port)
 	if err := grpcS.Serve(lis); err != nil {
 		log.Fatalf("error serving %s", err)
 	}
