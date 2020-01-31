@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+jobs:
   test:
     runs-on: ubuntu-18.04
     services:
