@@ -42,7 +42,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/pmylund/go-cache v2.1.0+incompatible // indirect
-	github.com/pressly/goose v2.4.5+incompatible
+	github.com/pressly/goose v2.6.0+incompatible
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/sirupsen/logrus v1.3.0
