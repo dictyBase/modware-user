@@ -22,6 +22,7 @@ import (
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/dictyBase/modware-user/message"
 	gclient "github.com/dictyBase/modware-user/message/grpc-client"
+	_ "github.com/jackc/pgx/stdlib"
 	"github.com/pressly/goose"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
