@@ -2,11 +2,13 @@ package nats
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	"database/sql"
 
@@ -83,20 +85,101 @@ func NewUser(email string) *pb.CreateUserRequest {
 	}
 }
 
+func CheckPostgresEnv() error {
+	envs := []string{
+		"POSTGRES_USER",
+		"POSTGRES_PASSWORD",
+		"POSTGRES_DB",
+		"POSTGRES_HOST",
+	}
+	for _, e := range envs {
+		if len(os.Getenv(e)) == 0 {
+			return fmt.Errorf("env %s is not set", e)
+		}
+	}
+	return nil
+}
+
+func CheckNatsEnv() error {
+	envs := []string{
+		"NATS_HOST",
+		"NATS_PORT",
+	}
+	for _, e := range envs {
+		if len(os.Getenv(e)) == 0 {
+			return fmt.Errorf("env %s is not set", e)
+		}
+	}
+	return nil
+}
+
+type TestPostgres struct {
+	DB *sql.DB
+}
+
+func NewTestPostgresFromEnv() (*TestPostgres, error) {
+	pg := new(TestPostgres)
+	if err := CheckPostgresEnv(); err != nil {
+		return pg, err
+	}
+	connStr := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"),
+	)
+	dbh, err := sql.Open("pgx", connStr)
+	if err != nil {
+		return pg, err
+	}
+	timeout, err := time.ParseDuration("28s")
+	t1 := time.Now()
+	for {
+		if err := dbh.Ping(); err != nil {
+			if time.Now().Sub(t1).Seconds() > timeout.Seconds() {
+				return pg, errors.New("timed out, no connection retrieved")
+			}
+			continue
+		}
+		break
+	}
+	pg.DB = dbh
+	return pg, nil
+}
+
+type TestNats struct {
+	Conn *gnats.Conn
+}
+
+func NewTestNatsFromEnv() (*TestNats, error) {
+	n := new(TestNats)
+	if err := CheckNatsEnv(); err != nil {
+		return n, err
+	}
+	addr := fmt.Sprintf("nats://%s:%s", os.Getenv("NATS_HOST"), os.Getenv("NATS_PORT"))
+	nc, err := gnats.Connect(addr)
+	if err != nil {
+		return n, err
+	}
+	timeout, err := time.ParseDuration("28s")
+	t1 := time.Now()
+	for {
+		if !nc.IsConnected() {
+			if time.Now().Sub(t1).Seconds() > timeout.Seconds() {
+				return n, errors.New("timed out trying to connect to nats server")
+			}
+			continue
+		}
+		break
+	}
+	n.Conn = nc
+	return n, nil
+}
+
 func TestMain(m *testing.M) {
-	// storage(postgresql connection)
-	pg, err := aphdocker.NewPgDockerWithImage("postgres:9.6.6-alpine")
+	pg, err := NewTestPostgresFromEnv()
 	if err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
+		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
-	pgresource, err := pg.Run()
-	if err != nil {
-		log.Fatalf("Could not start resource: %s", err)
-	}
-	db, err = pg.RetryDbConnection()
-	if err != nil {
-		log.Fatal(err)
-	}
+	db := pg.DB
 	// add the citext extension
 	_, err = db.Exec("CREATE EXTENSION citext")
 	if err != nil {
@@ -110,31 +193,12 @@ func TestMain(m *testing.M) {
 	if err := goose.Up(db, dir); err != nil {
 		log.Fatalf("issue with running database migration %s\n", err)
 	}
-	nats, err := aphdocker.NewNatsDocker()
+	_, err = NewTestNatsFromEnv()
 	if err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
+		log.Fatalf("unable to construct new NewTestNatsFromEnv instance %s", err)
 	}
-
-	// nats messaging server startup
-	nresource, err := nats.Run()
-	if err != nil {
-		log.Fatalf("Could not start resource: %s", err)
-	}
-	_, err = nats.RetryNatsConnection()
-	if err != nil {
-		log.Fatal(err)
-	}
-	natsHost = nats.GetIP()
-	natsPort = nats.GetPort()
 	go runGRPCServer(db)
-	code := m.Run()
-	if err = pg.Purge(pgresource); err != nil {
-		log.Fatalf("unable to remove postgresql container %s\n", err)
-	}
-	if err = nats.Purge(nresource); err != nil {
-		log.Fatalf("unable to remove nats container %s\n", err)
-	}
-	os.Exit(code)
+	os.Exit(m.Run())
 }
 
 func newNatsRequest(host, port string) (*gnats.EncodedConn, error) {
