@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/nats-io/go-nats/encoders/protobuf"
 
-	"github.com/dictyBase/apihelpers/aphdocker"
 	"github.com/dictyBase/go-genproto/dictybaseapis/pubsub"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/dictyBase/modware-user/message"
@@ -27,11 +27,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
+	git "gopkg.in/src-d/go-git.v4"
 )
 
 var pgConn = fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
+	"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
 var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
 var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
@@ -171,6 +172,15 @@ func NewTestNatsFromEnv() (*TestNats, error) {
 	return n, nil
 }
 
+func cloneDbSchemaRepo(repo string) (string, error) {
+	path, err := ioutil.TempDir("", "content")
+	if err != nil {
+		return path, err
+	}
+	_, err = git.PlainClone(path, false, &git.CloneOptions{URL: repo})
+	return path, err
+}
+
 func TestMain(m *testing.M) {
 	pg, err := NewTestPostgresFromEnv()
 	if err != nil {
@@ -182,7 +192,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dir, err := aphdocker.CloneDbSchemaRepo(schemaRepo)
+	dir, err := cloneDbSchemaRepo(schemaRepo)
 	defer os.RemoveAll(dir)
 	if err != nil {
 		log.Fatalf("issue with cloning %s repo %s\n", schemaRepo, err)

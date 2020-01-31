@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -12,19 +13,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dictyBase/apihelpers/aphdocker"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/pressly/goose"
 	"google.golang.org/grpc"
 	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
+	git "gopkg.in/src-d/go-git.v4"
 )
 
 var db *sql.DB
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
 var pgConn = fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
+	"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
 
 const (
 	port = ":9596"
@@ -89,6 +90,15 @@ func NewTestPostgresFromEnv() (*TestPostgres, error) {
 	return pg, nil
 }
 
+func cloneDbSchemaRepo(repo string) (string, error) {
+	path, err := ioutil.TempDir("", "content")
+	if err != nil {
+		return path, err
+	}
+	_, err = git.PlainClone(path, false, &git.CloneOptions{URL: repo})
+	return path, err
+}
+
 func TestMain(m *testing.M) {
 	pg, err := NewTestPostgresFromEnv()
 	if err != nil {
@@ -100,7 +110,8 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dir, err := aphdocker.CloneDbSchemaRepo(schemaRepo)
+	dir, err := cloneDbSchemaRepo(schemaRepo)
+	fmt.Printf("dir is %s", dir)
 	defer os.RemoveAll(dir)
 	if err != nil {
 		log.Fatalf("issue with cloning %s repo %s\n", schemaRepo, err)
