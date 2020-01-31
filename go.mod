@@ -1,25 +1,16 @@
 module github.com/dictyBase/modware-user
 
 require (
-	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
-	github.com/Microsoft/go-winio v0.4.11 // indirect
-	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/arangodb/go-driver v0.0.0-20190123094303-4da7b19c6d72 // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/dictyBase/apihelpers v0.0.0-20181218160245-dce81474776f
 	github.com/dictyBase/go-genproto v0.0.0-20190124152616-b3a18d697160
-	github.com/docker/distribution v2.7.0+incompatible // indirect
-	github.com/docker/docker v1.13.1 // indirect
-	github.com/docker/go-connections v0.4.0 // indirect
-	github.com/docker/go-units v0.3.3 // indirect
 	github.com/fatih/structs v1.1.0
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/go-chi/cors v1.0.0
 	github.com/go-ini/ini v1.41.0 // indirect
 	github.com/golang/protobuf v1.3.3
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
-	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
 	github.com/grpc-ecosystem/grpc-gateway v1.12.2
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
@@ -40,8 +31,6 @@ require (
 	github.com/nats-io/go-nats v1.7.0
 	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/nats-io/nuid v1.0.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
-	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pmylund/go-cache v2.1.0+incompatible // indirect
 	github.com/pressly/goose v2.4.5+incompatible
 	github.com/satori/go.uuid v1.2.0 // indirect
@@ -50,14 +39,10 @@ require (
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/soheilhy/cmux v0.1.4
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/grpc v1.27.0
 	gopkg.in/ini.v1 v1.41.0 // indirect
 	gopkg.in/mgutz/dat.v2 v2.0.0-20171004160617-d76e4f81c4ef
-	gopkg.in/src-d/go-git.v4 v4.8.1 // indirect
+	gopkg.in/src-d/go-git.v4 v4.8.1
 	gopkg.in/urfave/cli.v1 v1.20.0
-	gotest.tools v2.2.0+incompatible // indirect
 )
-
-replace github.com/docker/docker v1.13.1 => github.com/docker/engine v0.0.0-20180816081446-320063a2ad06
