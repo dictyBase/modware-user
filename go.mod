@@ -9,12 +9,13 @@ require (
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/go-chi/cors v1.0.0
 	github.com/go-ini/ini v1.41.0 // indirect
+	github.com/gofrs/uuid v3.2.0+incompatible // indirect
 	github.com/golang/protobuf v1.3.3
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
 	github.com/grpc-ecosystem/grpc-gateway v1.12.2
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
-	github.com/jackc/pgx v3.3.0+incompatible
+	github.com/jackc/pgx v3.6.2+incompatible
 	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
@@ -28,11 +29,11 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mwitkow/go-proto-validators v0.0.0-20180403085117-0950a7990007 // indirect
 	github.com/nats-io/gnatsd v1.4.0 // indirect
-	github.com/nats-io/go-nats v1.7.0
+	github.com/nats-io/go-nats v1.7.2
 	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/nats-io/nuid v1.0.0 // indirect
 	github.com/pmylund/go-cache v2.1.0+incompatible // indirect
-	github.com/pressly/goose v2.4.5+incompatible
+	github.com/pressly/goose v2.6.0+incompatible
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/sirupsen/logrus v1.4.2
