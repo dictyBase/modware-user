@@ -17,12 +17,11 @@ require (
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/go-chi/cors v1.0.0
 	github.com/go-ini/ini v1.41.0 // indirect
-	github.com/gogo/protobuf v1.2.0 // indirect
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorilla/mux v1.7.3 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
-	github.com/grpc-ecosystem/grpc-gateway v1.7.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0
+	github.com/grpc-ecosystem/grpc-gateway v1.12.2
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.3.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0 // indirect
@@ -43,12 +42,11 @@ require (
 	github.com/nats-io/nuid v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
 	github.com/pmylund/go-cache v2.1.0+incompatible // indirect
 	github.com/pressly/goose v2.4.5+incompatible
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
-	github.com/sirupsen/logrus v1.3.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/soheilhy/cmux v0.1.4
