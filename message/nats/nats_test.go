@@ -29,12 +29,14 @@ import (
 	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
 )
 
-var (
-	db       *sql.DB
-	natsHost string
-	natsPort string
-)
+var pgConn = fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
+var natsHost = os.Getenv("NATS_HOST")
+var natsPort = os.Getenv("NATS_PORT")
+var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
+var db *sql.DB
 
 const (
 	grpcPort = ":9595"
@@ -122,11 +124,7 @@ func NewTestPostgresFromEnv() (*TestPostgres, error) {
 	if err := CheckPostgresEnv(); err != nil {
 		return pg, err
 	}
-	connStr := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"),
-	)
-	dbh, err := sql.Open("pgx", connStr)
+	dbh, err := sql.Open("pgx", pgConn)
 	if err != nil {
 		return pg, err
 	}
@@ -154,8 +152,7 @@ func NewTestNatsFromEnv() (*TestNats, error) {
 	if err := CheckNatsEnv(); err != nil {
 		return n, err
 	}
-	addr := fmt.Sprintf("nats://%s:%s", os.Getenv("NATS_HOST"), os.Getenv("NATS_PORT"))
-	nc, err := gnats.Connect(addr)
+	nc, err := gnats.Connect(natsAddr)
 	if err != nil {
 		return n, err
 	}
