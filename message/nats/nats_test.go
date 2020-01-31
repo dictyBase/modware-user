@@ -59,11 +59,11 @@ func runGRPCServer(db *sql.DB) {
 	pb.RegisterUserServiceServer(grpcS, server.NewUserService(dbh))
 	lis, err := net.Listen("tcp", grpcPort)
 	if err != nil {
-		panic(err)
+		log.Fatalf("error listening to grpc port %s", err)
 	}
 	log.Printf("starting grpc server at port %s", grpcPort)
 	if err := grpcS.Serve(lis); err != nil {
-		panic(err)
+		log.Fatalf("error serving user server %s", err)
 	}
 }
 
