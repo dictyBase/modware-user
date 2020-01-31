@@ -41,7 +41,7 @@ var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
 var db *sql.DB
 
 const (
-	grpcPort = ":9595"
+	grpcPort = ":9596"
 )
 
 func tearDownTest(t *testing.T) {
