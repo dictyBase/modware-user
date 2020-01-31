@@ -1,14 +1,11 @@
 module github.com/dictyBase/modware-user
 
 require (
-	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
 	github.com/cockroachdb/apd v1.1.0 // indirect
-	github.com/dictyBase/apihelpers v0.0.0-20181218160245-dce81474776f
+	github.com/dictyBase/apihelpers v0.0.0-20190516195304-f1adf8d9f18d
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
 	github.com/fatih/structs v1.1.0
-	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/go-chi/cors v1.0.0
-	github.com/go-ini/ini v1.41.0 // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.3.2
@@ -18,26 +15,15 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.12.2
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.6.2+incompatible
-	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/kr/pretty v0.2.0 // indirect
-	github.com/mattn/go-colorable v0.0.9 // indirect
-	github.com/mattn/go-isatty v0.0.4 // indirect
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mgutz/jo v1.1.0 // indirect
-	github.com/mgutz/logxi v0.0.0-20161027140823-aebf8a7d67ab // indirect
-	github.com/mgutz/str v1.2.0 // indirect
 	github.com/mgutz/to v1.0.0 // indirect
-	github.com/minio/minio-go v6.0.14+incompatible // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mwitkow/go-proto-validators v0.3.0 // indirect
 	github.com/nats-io/gnatsd v1.4.0 // indirect
 	github.com/nats-io/go-nats v1.7.2
-	github.com/nats-io/nkeys v0.0.2 // indirect
-	github.com/nats-io/nuid v1.0.0 // indirect
-	github.com/pmylund/go-cache v2.1.0+incompatible // indirect
 	github.com/pressly/goose v2.6.0+incompatible
-	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
@@ -51,7 +37,7 @@ require (
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/ini.v1 v1.41.0 // indirect
 	gopkg.in/mgutz/dat.v2 v2.0.0-20171004160617-d76e4f81c4ef
-	gopkg.in/src-d/go-git.v4 v4.8.1
+	gopkg.in/src-d/go-git.v4 v4.11.0
 	gopkg.in/urfave/cli.v1 v1.20.0
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
