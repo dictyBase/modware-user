@@ -3,12 +3,14 @@ package server
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/dictyBase/apihelpers/aphdocker"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
@@ -20,6 +22,9 @@ import (
 
 var db *sql.DB
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
+var pgConn = fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
 
 const (
 	port = ":9596"
@@ -41,19 +46,55 @@ func runGRPCServer(db *sql.DB) {
 	}
 }
 
+func CheckPostgresEnv() error {
+	envs := []string{
+		"POSTGRES_USER",
+		"POSTGRES_PASSWORD",
+		"POSTGRES_DB",
+		"POSTGRES_HOST",
+	}
+	for _, e := range envs {
+		if len(os.Getenv(e)) == 0 {
+			return fmt.Errorf("env %s is not set", e)
+		}
+	}
+	return nil
+}
+
+type TestPostgres struct {
+	DB *sql.DB
+}
+
+func NewTestPostgresFromEnv() (*TestPostgres, error) {
+	pg := new(TestPostgres)
+	if err := CheckPostgresEnv(); err != nil {
+		return pg, err
+	}
+	dbh, err := sql.Open("pgx", pgConn)
+	if err != nil {
+		return pg, err
+	}
+	timeout, err := time.ParseDuration("28s")
+	t1 := time.Now()
+	for {
+		if err := dbh.Ping(); err != nil {
+			if time.Now().Sub(t1).Seconds() > timeout.Seconds() {
+				return pg, errors.New("timed out, no connection retrieved")
+			}
+			continue
+		}
+		break
+	}
+	pg.DB = dbh
+	return pg, nil
+}
+
 func TestMain(m *testing.M) {
-	pg, err := aphdocker.NewPgDocker()
+	pg, err := NewTestPostgresFromEnv()
 	if err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
+		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
-	resource, err := pg.Run()
-	if err != nil {
-		log.Fatalf("Could not start resource: %s", err)
-	}
-	db, err = pg.RetryDbConnection()
-	if err != nil {
-		log.Fatal(err)
-	}
+	db := pg.DB
 	// add the citext extension
 	_, err = db.Exec("CREATE EXTENSION citext")
 	if err != nil {
@@ -68,11 +109,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("issue with running database migration %s\n", err)
 	}
 	go runGRPCServer(db)
-	code := m.Run()
-	if err = pg.Purge(resource); err != nil {
-		log.Fatalf("unable to remove container %s\n", err)
-	}
-	os.Exit(code)
+	os.Exit(m.Run())
 }
 
 func tearDownTest(t *testing.T) {
