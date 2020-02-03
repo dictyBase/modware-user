@@ -150,7 +150,7 @@ func NewPermission(perm, resource string) *pb.CreatePermissionRequest {
 	}
 }
 
-func (s *TestPostgres) TestPermissionCreate(t *testing.T) {
+func TestPermissionCreate(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -176,7 +176,7 @@ func (s *TestPostgres) TestPermissionCreate(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestPermissionGet(t *testing.T) {
+func TestPermissionGet(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -210,7 +210,7 @@ func (s *TestPostgres) TestPermissionGet(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestPermissionGetAllWithFields(t *testing.T) {
+func TestPermissionGetAllWithFields(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -250,7 +250,7 @@ func (s *TestPostgres) TestPermissionGetAllWithFields(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestPermissionGetAll(t *testing.T) {
+func TestPermissionGetAll(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -287,7 +287,7 @@ func (s *TestPostgres) TestPermissionGetAll(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestPermissionGetAllWithFieldsAndFilter(t *testing.T) {
+func TestPermissionGetAllWithFieldsAndFilter(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -354,7 +354,7 @@ func (s *TestPostgres) TestPermissionGetAllWithFieldsAndFilter(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestPermissionUpdate(t *testing.T) {
+func TestPermissionUpdate(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -390,7 +390,7 @@ func (s *TestPostgres) TestPermissionUpdate(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestPermissionDelete(t *testing.T) {
+func TestPermissionDelete(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {

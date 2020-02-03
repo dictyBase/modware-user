@@ -274,7 +274,7 @@ func replyUser(subj string, c message.UserClient, req *pubsub.IdRequest) *pubsub
 	}
 }
 
-func (s *TestPostgres) TestUserGetReply(t *testing.T) {
+func TestUserGetReply(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
@@ -322,7 +322,7 @@ func (s *TestPostgres) TestUserGetReply(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestUserExistReply(t *testing.T) {
+func TestUserExistReply(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
@@ -361,7 +361,7 @@ func (s *TestPostgres) TestUserExistReply(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestUserDeleteReply(t *testing.T) {
+func TestUserDeleteReply(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
