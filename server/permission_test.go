@@ -113,10 +113,9 @@ func TestMain(m *testing.M) {
 	// add the citext extension
 	_, err = db.Exec("CREATE EXTENSION citext")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Errorf("error creating extension citext %s", err)
 	}
 	dir, err := cloneDbSchemaRepo(schemaRepo)
-	fmt.Printf("dir is %s", dir)
 	defer os.RemoveAll(dir)
 	if err != nil {
 		log.Fatalf("issue with cloning %s repo %s\n", schemaRepo, err)
