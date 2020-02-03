@@ -131,7 +131,7 @@ func NewUpdateRoleWithPermission(newRole string, existingRole *pb.Role, perm *pb
 }
 
 func (s *TestPostgres) TestRoleCreateWithPermission(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -167,7 +167,7 @@ func (s *TestPostgres) TestRoleCreateWithPermission(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleUpdateWithPermission(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -203,7 +203,7 @@ func (s *TestPostgres) TestRoleUpdateWithPermission(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleDelete(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -222,7 +222,7 @@ func (s *TestPostgres) TestRoleDelete(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleGet(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -247,7 +247,7 @@ func (s *TestPostgres) TestRoleGet(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleGetWithFields(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -275,7 +275,7 @@ func (s *TestPostgres) TestRoleGetWithFields(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleGetWithFieldsAndInclude(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -325,7 +325,7 @@ func (s *TestPostgres) TestRoleGetWithFieldsAndInclude(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleGetAll(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -357,7 +357,7 @@ func (s *TestPostgres) TestRoleGetAll(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleGetAllWithFields(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -396,7 +396,7 @@ func (s *TestPostgres) TestRoleGetAllWithFields(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleGetAllWithFieldsAndFilter(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -436,7 +436,7 @@ func (s *TestPostgres) TestRoleGetAllWithFieldsAndFilter(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -510,7 +510,7 @@ func (s *TestPostgres) TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleCreateUserRelationship(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -563,7 +563,7 @@ func (s *TestPostgres) TestRoleCreateUserRelationship(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleCreatePermissionRelationship(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -617,7 +617,7 @@ func (s *TestPostgres) TestRoleCreatePermissionRelationship(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleUpdatePermissionRelationship(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -681,7 +681,7 @@ func (s *TestPostgres) TestRoleUpdatePermissionRelationship(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleDeletePermissionRelationship(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -717,7 +717,7 @@ func (s *TestPostgres) TestRoleDeletePermissionRelationship(t *testing.T) {
 }
 
 func (s *TestPostgres) TestRoleGetPermissionRelationship(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -753,7 +753,7 @@ func (s *TestPostgres) TestRoleGetPermissionRelationship(t *testing.T) {
 }
 
 func (s *TestPostgres) TestGetRelatedUsers(t *testing.T) {
-	defer tearDownTestDB(t, s.DB)
+	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
