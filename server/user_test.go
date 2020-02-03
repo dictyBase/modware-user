@@ -96,7 +96,7 @@ func NewUserWithRole(email string, role *pb.Role) *pb.CreateUserRequest {
 }
 
 func (s *TestPostgres) TestCreateUserWithRole(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -132,7 +132,7 @@ func (s *TestPostgres) TestCreateUserWithRole(t *testing.T) {
 }
 
 func (s *TestPostgres) TestUpdateUserWithRole(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -168,7 +168,7 @@ func (s *TestPostgres) TestUpdateUserWithRole(t *testing.T) {
 }
 
 func (s *TestPostgres) TestDeleteUser(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -187,7 +187,7 @@ func (s *TestPostgres) TestDeleteUser(t *testing.T) {
 }
 
 func (s *TestPostgres) TestExistUser(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -209,7 +209,7 @@ func (s *TestPostgres) TestExistUser(t *testing.T) {
 }
 
 func (s *TestPostgres) TestGetUser(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -237,7 +237,7 @@ func (s *TestPostgres) TestGetUser(t *testing.T) {
 }
 
 func (s *TestPostgres) TestGetUserByEmail(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -269,7 +269,7 @@ func (s *TestPostgres) TestGetUserByEmail(t *testing.T) {
 }
 
 func (s *TestPostgres) TestGetUserWithRole(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -328,7 +328,7 @@ func (s *TestPostgres) TestGetUserWithRole(t *testing.T) {
 }
 
 func (s *TestPostgres) TestGetAllUsers(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -500,7 +500,7 @@ func (s *TestPostgres) TestGetAllUsers(t *testing.T) {
 }
 
 func (s *TestPostgres) TestGetAllUsersWithFilter(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -571,7 +571,7 @@ func (s *TestPostgres) TestGetAllUsersWithFilter(t *testing.T) {
 }
 
 func (s *TestPostgres) TestGetAllUsersWithRoles(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -664,7 +664,7 @@ func (s *TestPostgres) TestGetAllUsersWithRoles(t *testing.T) {
 }
 
 func (s *TestPostgres) TestGetRelatedRoles(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -699,7 +699,7 @@ func (s *TestPostgres) TestGetRelatedRoles(t *testing.T) {
 }
 
 func (s *TestPostgres) TestUpdateRelatedRoles(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)

@@ -44,7 +44,7 @@ const (
 	grpcPort = ":9595"
 )
 
-func tearDownTest(t *testing.T, db *sql.DB) {
+func tearDownTestDB(t *testing.T, db *sql.DB) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
 		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
 		if err != nil {
@@ -162,6 +162,9 @@ func NewTestNatsFromEnv() (*TestNats, error) {
 		return n, err
 	}
 	timeout, err := time.ParseDuration("28s")
+	if err != nil {
+		return n, err
+	}
 	t1 := time.Now()
 	for {
 		if !nc.IsConnected() {
@@ -271,7 +274,7 @@ func replyUser(subj string, c message.UserClient, req *pubsub.IdRequest) *pubsub
 }
 
 func (s *TestPostgres) TestUserGetReply(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -319,7 +322,7 @@ func (s *TestPostgres) TestUserGetReply(t *testing.T) {
 }
 
 func (s *TestPostgres)  TestUserExistReply(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -331,7 +334,7 @@ func (s *TestPostgres)  TestUserExistReply(t *testing.T) {
 	}
 	defer req.Close()
 	client := pb.NewUserServiceClient(conn)
-	nuser, err := client.CreateUser(context.Background(), NewUser("bobsacamano@seinfeld.org"))
+	nuser, err := client.CreateUser(context.Background(), NewUser("art@vandelay.org"))
 	if err != nil {
 		t.Fatalf("could not store the user %s\n", err)
 	}
@@ -358,7 +361,7 @@ func (s *TestPostgres)  TestUserExistReply(t *testing.T) {
 }
 
 func (s *TestPostgres) TestUserDeleteReply(t *testing.T) {
-	defer tearDownTest(t, s.DB)
+	defer tearDownTestDB(t, s.DB)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
