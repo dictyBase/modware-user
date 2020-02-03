@@ -198,7 +198,7 @@ func TestMain(m *testing.M) {
 	// add the citext extension
 	_, err = db.Exec("CREATE EXTENSION citext")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Errorf("error creating extension citext %s", err)
 	}
 	dir, err := cloneDbSchemaRepo(schemaRepo)
 	defer os.RemoveAll(dir)
@@ -276,7 +276,8 @@ func replyUser(subj string, c message.UserClient, req *pubsub.IdRequest) *pubsub
 
 func TestUserGetReply(t *testing.T) {
 	defer tearDownTest(t)
-	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure(), grpc.WithBlock(),
+        grpc.WithTimeout(5 * time.Second))
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
 	}
