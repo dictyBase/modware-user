@@ -128,7 +128,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func tearDownTest(t *testing.T, db *sql.DB) {
+func tearDownTest(t *testing.T) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
 		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
 		if err != nil {
