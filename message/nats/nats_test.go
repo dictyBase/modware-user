@@ -272,12 +272,7 @@ func (s *TestPostgres) TestUserGetReply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
 	}
-	defer func() {
-		err := conn.Close()
-		if err != nil {
-			t.Fatalf("error in closing grpc connection %s", err)
-		}
-	}()
+	defer conn.Close()
 	req, err := newNatsRequest(natsHost, natsPort)
 	if err != nil {
 		t.Fatalf("cannot connect to nats %s\n", err)
@@ -292,12 +287,7 @@ func (s *TestPostgres) TestUserGetReply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not connect to nats server %s\n", err)
 	}
-	defer func() {
-		err := reply.Stop()
-		if err != nil {
-			t.Fatalf("error in closing grpc connection %s", err)
-		}
-	}()
+	defer reply.Stop()
 	nclient := gclient.NewUserClient(conn)
 	err = reply.Start("UserService.*", nclient, replyUser)
 	if err != nil {
