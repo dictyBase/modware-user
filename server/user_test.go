@@ -95,7 +95,7 @@ func NewUserWithRole(email string, role *pb.Role) *pb.CreateUserRequest {
 	}
 }
 
-func (s *TestPostgres) TestCreateUserWithRole(t *testing.T) {
+func TestCreateUserWithRole(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *TestPostgres) TestCreateUserWithRole(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestUpdateUserWithRole(t *testing.T) {
+func TestUpdateUserWithRole(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -167,7 +167,7 @@ func (s *TestPostgres) TestUpdateUserWithRole(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestDeleteUser(t *testing.T) {
+func TestDeleteUser(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -186,7 +186,7 @@ func (s *TestPostgres) TestDeleteUser(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestExistUser(t *testing.T) {
+func TestExistUser(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -208,7 +208,7 @@ func (s *TestPostgres) TestExistUser(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestGetUser(t *testing.T) {
+func TestGetUser(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -236,7 +236,7 @@ func (s *TestPostgres) TestGetUser(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestGetUserByEmail(t *testing.T) {
+func TestGetUserByEmail(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -268,7 +268,7 @@ func (s *TestPostgres) TestGetUserByEmail(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestGetUserWithRole(t *testing.T) {
+func TestGetUserWithRole(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -327,7 +327,7 @@ func (s *TestPostgres) TestGetUserWithRole(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestGetAllUsers(t *testing.T) {
+func TestGetAllUsers(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -499,7 +499,7 @@ func (s *TestPostgres) TestGetAllUsers(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestGetAllUsersWithFilter(t *testing.T) {
+func TestGetAllUsersWithFilter(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -570,7 +570,7 @@ func (s *TestPostgres) TestGetAllUsersWithFilter(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestGetAllUsersWithRoles(t *testing.T) {
+func TestGetAllUsersWithRoles(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -663,7 +663,7 @@ func (s *TestPostgres) TestGetAllUsersWithRoles(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestGetRelatedRoles(t *testing.T) {
+func TestGetRelatedRoles(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
@@ -698,7 +698,7 @@ func (s *TestPostgres) TestGetRelatedRoles(t *testing.T) {
 	}
 }
 
-func (s *TestPostgres) TestUpdateRelatedRoles(t *testing.T) {
+func TestUpdateRelatedRoles(t *testing.T) {
 	defer tearDownTest(t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
