@@ -194,7 +194,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
-	db := pg.DB
+	db = pg.DB
 	// add the citext extension
 	_, err = db.Exec("CREATE EXTENSION citext")
 	if err != nil {
