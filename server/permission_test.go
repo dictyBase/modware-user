@@ -151,7 +151,7 @@ func NewPermission(perm, resource string) *pb.CreatePermissionRequest {
 
 func TestPermissionCreate(t *testing.T) {
 	defer tearDownTest(t)
-	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure(), grpc.WithBlock(),
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure(), grpc.WithBlock(),
 		grpc.WithTimeout(5*time.Second))
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
