@@ -22,7 +22,6 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 )
 
-var db *sql.DB
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
 var pgConn = fmt.Sprintf(
 	"postgres://%s:%s@%s:%s/%s?sslmode=disable",
@@ -124,7 +123,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func tearDownTest(t *testing.T) {
+func tearDownTest(t *testing.T, db *sql.DB) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
 		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
 		if err != nil {
@@ -146,8 +145,8 @@ func NewPermission(perm, resource string) *pb.CreatePermissionRequest {
 	}
 }
 
-func TestPermissionCreate(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestPermissionCreate(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -172,8 +171,8 @@ func TestPermissionCreate(t *testing.T) {
 	}
 }
 
-func TestPermissionGet(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestPermissionGet(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -206,8 +205,8 @@ func TestPermissionGet(t *testing.T) {
 	}
 }
 
-func TestPermissionGetAllWithFields(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestPermissionGetAllWithFields(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -246,8 +245,8 @@ func TestPermissionGetAllWithFields(t *testing.T) {
 	}
 }
 
-func TestPermissionGetAll(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestPermissionGetAll(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -283,8 +282,8 @@ func TestPermissionGetAll(t *testing.T) {
 	}
 }
 
-func TestPermissionGetAllWithFieldsAndFilter(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestPermissionGetAllWithFieldsAndFilter(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -350,8 +349,8 @@ func TestPermissionGetAllWithFieldsAndFilter(t *testing.T) {
 	}
 }
 
-func TestPermissionUpdate(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestPermissionUpdate(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -386,8 +385,8 @@ func TestPermissionUpdate(t *testing.T) {
 	}
 }
 
-func TestPermissionDelete(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestPermissionDelete(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
