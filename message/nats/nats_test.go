@@ -38,13 +38,12 @@ var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
 var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
-var db *sql.DB
 
 const (
 	grpcPort = ":9595"
 )
 
-func tearDownTest(t *testing.T) {
+func tearDownTest(t *testing.T, db *sql.DB) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
 		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
 		if err != nil {
@@ -267,13 +266,18 @@ func replyUser(subj string, c message.UserClient, req *pubsub.IdRequest) *pubsub
 	}
 }
 
-func TestUserGetReply(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestUserGetReply(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
 	}
-	defer conn.Close()
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			t.Fatalf("error in closing grpc connection %s", err)
+		}
+	}()
 	req, err := newNatsRequest(natsHost, natsPort)
 	if err != nil {
 		t.Fatalf("cannot connect to nats %s\n", err)
@@ -288,7 +292,12 @@ func TestUserGetReply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not connect to nats server %s\n", err)
 	}
-	defer reply.Stop()
+	defer func() {
+		err := reply.Stop()
+		if err != nil {
+			t.Fatalf("error in closing grpc connection %s", err)
+		}
+	}()
 	nclient := gclient.NewUserClient(conn)
 	err = reply.Start("UserService.*", nclient, replyUser)
 	if err != nil {
@@ -315,8 +324,8 @@ func TestUserGetReply(t *testing.T) {
 	}
 }
 
-func TestUserExistReply(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres)  TestUserExistReply(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -354,8 +363,8 @@ func TestUserExistReply(t *testing.T) {
 	}
 }
 
-func TestUserDeleteReply(t *testing.T) {
-	defer tearDownTest(t)
+func (s *TestPostgres) TestUserDeleteReply(t *testing.T) {
+	defer tearDownTest(t, s.DB)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
