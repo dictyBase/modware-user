@@ -31,9 +31,10 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 )
 
+var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
 var pgConn = fmt.Sprintf(
-	"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
+	"postgres://%s:%s@%s/%s?sslmode=disable",
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, os.Getenv("POSTGRES_DB"))
 var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
 var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
@@ -130,10 +131,13 @@ func NewTestPostgresFromEnv() (*TestPostgres, error) {
 		return pg, err
 	}
 	timeout, err := time.ParseDuration("28s")
+	if err != nil {
+		return pg, err
+	}
 	t1 := time.Now()
 	for {
 		if err := dbh.Ping(); err != nil {
-			if time.Now().Sub(t1).Seconds() > timeout.Seconds() {
+			if time.Since(t1).Seconds() > timeout.Seconds() {
 				return pg, errors.New("timed out, no connection retrieved")
 			}
 			continue
@@ -161,7 +165,7 @@ func NewTestNatsFromEnv() (*TestNats, error) {
 	t1 := time.Now()
 	for {
 		if !nc.IsConnected() {
-			if time.Now().Sub(t1).Seconds() > timeout.Seconds() {
+			if time.Since(t1).Seconds() > timeout.Seconds() {
 				return n, errors.New("timed out trying to connect to nats server")
 			}
 			continue

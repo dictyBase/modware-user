@@ -23,9 +23,10 @@ import (
 )
 
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
+var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
 var pgConn = fmt.Sprintf(
-	"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
+	"postgres://%s:%s@%s/%s?sslmode=disable",
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, os.Getenv("POSTGRES_DB"))
 
 const (
 	port = ":9596"
@@ -76,10 +77,13 @@ func NewTestPostgresFromEnv() (*TestPostgres, error) {
 		return pg, err
 	}
 	timeout, err := time.ParseDuration("28s")
+	if err != nil {
+		return pg, err
+	}
 	t1 := time.Now()
 	for {
 		if err := dbh.Ping(); err != nil {
-			if time.Now().Sub(t1).Seconds() > timeout.Seconds() {
+			if time.Since(t1).Seconds() > timeout.Seconds() {
 				return pg, errors.New("timed out, no connection retrieved")
 			}
 			continue
