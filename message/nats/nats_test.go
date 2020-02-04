@@ -34,7 +34,7 @@ import (
 var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
 var pgConn = fmt.Sprintf(
 	"postgres://%s:%s@%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, "nats_test")
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, os.Getenv("POSTGRES_DB"))
 var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
 var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
@@ -94,6 +94,7 @@ func CheckPostgresEnv() error {
 	envs := []string{
 		"POSTGRES_USER",
 		"POSTGRES_PASSWORD",
+		"POSTGRES_DB",
 		"POSTGRES_HOST",
 	}
 	for _, e := range envs {
@@ -189,7 +190,6 @@ func cloneDbSchemaRepo(repo string) (string, error) {
 }
 
 func TestMain(m *testing.M) {
-	fmt.Print(pgConn)
 	pg, err := NewTestPostgresFromEnv()
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
@@ -401,12 +401,3 @@ func TestUserDeleteReply(t *testing.T) {
 		t.Fatalf("error in delete user %s", status.ErrorProto(ruser.Status))
 	}
 }
-
-// func generateName() string {
-//     b := make([]byte, 5)
-//     if _, err := rand.Read(b); err != nil {
-//         panic(err)
-//     }
-//     s := fmt.Sprintf("%X", b)
-//     return s
-// }

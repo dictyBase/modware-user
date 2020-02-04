@@ -10,6 +10,7 @@ jobs:
       postgres:
         image: postgres:9.6.6-alpine
         env:
+          POSTGRES_DB: pgtest
           POSTGRES_USER: pguser
           POSTGRES_PASSWORD: pgdocker
         ports:
@@ -28,6 +29,7 @@ jobs:
       - name: unit test
         run: go test -covermode=atomic -coverprofile=profile.cov -v ./...
         env:
+          POSTGRES_DB: pgtest
           POSTGRES_USER: pguser
           POSTGRES_PASSWORD: pgdocker
           POSTGRES_HOST: localhost

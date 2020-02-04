@@ -26,7 +26,7 @@ var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
 var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
 var pgConn = fmt.Sprintf(
 	"postgres://%s:%s@%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, "server_test")
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, os.Getenv("POSTGRES_DB"))
 var db *sql.DB
 
 const (
@@ -53,6 +53,7 @@ func CheckPostgresEnv() error {
 	envs := []string{
 		"POSTGRES_USER",
 		"POSTGRES_PASSWORD",
+		"POSTGRES_DB",
 		"POSTGRES_HOST",
 	}
 	for _, e := range envs {
@@ -407,12 +408,3 @@ func TestPermissionDelete(t *testing.T) {
 		t.Fatalf("could not delete resource with id %d", nperm.Data.Id)
 	}
 }
-
-// func generateName() string {
-// 	b := make([]byte, 5)
-// 	if _, err := rand.Read(b); err != nil {
-// 		panic(err)
-// 	}
-// 	s := fmt.Sprintf("%X", b)
-// 	return s
-// }
