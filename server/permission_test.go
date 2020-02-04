@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -23,12 +22,11 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 )
 
-var dbName = generateName()
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
 var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
 var pgConn = fmt.Sprintf(
 	"postgres://%s:%s@%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, dbName)
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, "server_test")
 var db *sql.DB
 
 const (
@@ -410,11 +408,11 @@ func TestPermissionDelete(t *testing.T) {
 	}
 }
 
-func generateName() string {
-	b := make([]byte, 5)
-	if _, err := rand.Read(b); err != nil {
-		panic(err)
-	}
-	s := fmt.Sprintf("%X", b)
-	return s
-}
+// func generateName() string {
+// 	b := make([]byte, 5)
+// 	if _, err := rand.Read(b); err != nil {
+// 		panic(err)
+// 	}
+// 	s := fmt.Sprintf("%X", b)
+// 	return s
+// }
