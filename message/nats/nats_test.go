@@ -2,6 +2,7 @@ package nats
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -31,10 +32,11 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 )
 
+var dbName = generateName()
 var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
 var pgConn = fmt.Sprintf(
 	"postgres://%s:%s@%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, os.Getenv("POSTGRES_DB"))
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, dbName)
 var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
 var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
@@ -57,8 +59,6 @@ func tearDownTest(t *testing.T) {
 func runGRPCServer(db *sql.DB) {
 	dbh := runner.NewDB(db, "postgres")
 	grpcS := grpc.NewServer()
-	pb.RegisterPermissionServiceServer(grpcS, server.NewPermissionService(dbh))
-	pb.RegisterRoleServiceServer(grpcS, server.NewRoleService(dbh))
 	pb.RegisterUserServiceServer(grpcS, server.NewUserService(dbh))
 	lis, err := net.Listen("tcp", grpcPort)
 	if err != nil {
@@ -66,7 +66,7 @@ func runGRPCServer(db *sql.DB) {
 	}
 	log.Printf("starting grpc server at port %s", grpcPort)
 	if err := grpcS.Serve(lis); err != nil {
-		log.Fatalf("error serving grpc server %s", err)
+		log.Fatalf("error serving user server %s", err)
 	}
 }
 
@@ -200,7 +200,7 @@ func TestMain(m *testing.M) {
 	// add the citext extension
 	_, err = db.Exec("CREATE EXTENSION citext")
 	if err != nil {
-		fmt.Printf("error creating extension citext %s", err)
+		log.Fatal(err)
 	}
 	dir, err := cloneDbSchemaRepo(schemaRepo)
 	defer os.RemoveAll(dir)
@@ -402,4 +402,13 @@ func TestUserDeleteReply(t *testing.T) {
 	if !ruser.Exist {
 		t.Fatalf("error in delete user %s", status.ErrorProto(ruser.Status))
 	}
+}
+
+func generateName() string {
+    b := make([]byte, 5)
+    if _, err := rand.Read(b); err != nil {
+        panic(err)
+    }
+    s := fmt.Sprintf("%X", b)
+    return s
 }
