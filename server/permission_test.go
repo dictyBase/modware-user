@@ -16,7 +16,6 @@ import (
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	_ "github.com/jackc/pgx/stdlib"
-	"github.com/pressly/goose"
 	"google.golang.org/grpc"
 	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
 	git "gopkg.in/src-d/go-git.v4"
