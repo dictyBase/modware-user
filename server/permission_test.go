@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -419,13 +418,4 @@ func TestPermissionDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not delete resource with id %d", nperm.Data.Id)
 	}
-}
-
-func generateName() string {
-	b := make([]byte, 5)
-	if _, err := rand.Read(b); err != nil {
-		panic(err)
-	}
-	s := fmt.Sprintf("%X", b)
-	return s
 }
