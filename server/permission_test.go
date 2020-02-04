@@ -55,7 +55,6 @@ func CheckPostgresEnv() error {
 	envs := []string{
 		"POSTGRES_USER",
 		"POSTGRES_PASSWORD",
-		"POSTGRES_DB",
 		"POSTGRES_HOST",
 	}
 	for _, e := range envs {
@@ -412,10 +411,10 @@ func TestPermissionDelete(t *testing.T) {
 }
 
 func generateName() string {
-    b := make([]byte, 5)
-    if _, err := rand.Read(b); err != nil {
-        panic(err)
-    }
-    s := fmt.Sprintf("%X", b)
-    return s
+	b := make([]byte, 5)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	s := fmt.Sprintf("%X", b)
+	return s
 }
