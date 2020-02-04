@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -23,10 +24,6 @@ import (
 )
 
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
-var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
-var pgConn = fmt.Sprintf(
-	"postgres://%s:%s@%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, os.Getenv("POSTGRES_DB"))
 var db *sql.DB
 
 const (
@@ -68,11 +65,15 @@ type TestPostgres struct {
 	DB *sql.DB
 }
 
-func NewTestPostgresFromEnv() (*TestPostgres, error) {
+func NewTestPostgresFromEnv(dbName string) (*TestPostgres, error) {
 	pg := new(TestPostgres)
 	if err := CheckPostgresEnv(); err != nil {
 		return pg, err
 	}
+	pgAddr := fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
+	pgConn := fmt.Sprintf(
+		"postgres://%s:%s@%s/%s?sslmode=disable",
+		os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, dbName)
 	dbh, err := sql.Open("pgx", pgConn)
 	if err != nil {
 		return pg, err
@@ -105,13 +106,24 @@ func cloneDbSchemaRepo(repo string) (string, error) {
 }
 
 func TestMain(m *testing.M) {
-	pg, err := NewTestPostgresFromEnv()
+	pg, err := NewTestPostgresFromEnv(os.Getenv("POSTGRES_DB"))
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
-	db = pg.DB
+	db := pg.DB
+	dbName := generateName()
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+	if err != nil {
+		log.Fatalf("issue creating new db %s", err)
+	}
+	db.Close()
+	pgNew, err := NewTestPostgresFromEnv(dbName)
+	if err != nil {
+		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
+	}
+	newDb := pgNew.DB
 	// add the citext extension
-	_, err = db.Exec("CREATE EXTENSION citext")
+	_, err = newDb.Exec("CREATE EXTENSION citext")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -123,7 +135,7 @@ func TestMain(m *testing.M) {
 	if err := goose.Up(db, dir); err != nil {
 		log.Fatalf("issue with running database migration %s\n", err)
 	}
-	go runGRPCServer(db)
+	go runGRPCServer(newDb)
 	os.Exit(m.Run())
 }
 
@@ -407,4 +419,13 @@ func TestPermissionDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not delete resource with id %d", nperm.Data.Id)
 	}
+}
+
+func generateName() string {
+	b := make([]byte, 5)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	s := fmt.Sprintf("%X", b)
+	return s
 }
