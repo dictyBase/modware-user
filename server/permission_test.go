@@ -2,23 +2,132 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	_ "github.com/jackc/pgx/stdlib"
+	"github.com/pressly/goose"
 	"google.golang.org/grpc"
+	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
+	git "gopkg.in/src-d/go-git.v4"
 )
 
+var dbName = generateName()
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
+var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
+var pgConn = fmt.Sprintf(
+	"postgres://%s:%s@%s/%s?sslmode=disable",
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, dbName)
 var db *sql.DB
 
 const (
-	port = ":9595"
+	port = ":9596"
 )
+
+func runGRPCServer(db *sql.DB) {
+	dbh := runner.NewDB(db, "postgres")
+	grpcS := grpc.NewServer()
+	pb.RegisterPermissionServiceServer(grpcS, NewPermissionService(dbh))
+	pb.RegisterRoleServiceServer(grpcS, NewRoleService(dbh))
+	pb.RegisterUserServiceServer(grpcS, NewUserService(dbh))
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Fatalf("error listening to grpc port %s", err)
+	}
+	log.Printf("starting grpc server at port %s", port)
+	if err := grpcS.Serve(lis); err != nil {
+		log.Fatalf("error serving %s", err)
+	}
+}
+
+func CheckPostgresEnv() error {
+	envs := []string{
+		"POSTGRES_USER",
+		"POSTGRES_PASSWORD",
+		"POSTGRES_DB",
+		"POSTGRES_HOST",
+	}
+	for _, e := range envs {
+		if len(os.Getenv(e)) == 0 {
+			return fmt.Errorf("env %s is not set", e)
+		}
+	}
+	return nil
+}
+
+type TestPostgres struct {
+	DB *sql.DB
+}
+
+func NewTestPostgresFromEnv() (*TestPostgres, error) {
+	pg := new(TestPostgres)
+	if err := CheckPostgresEnv(); err != nil {
+		return pg, err
+	}
+	dbh, err := sql.Open("pgx", pgConn)
+	if err != nil {
+		return pg, err
+	}
+	timeout, err := time.ParseDuration("28s")
+	if err != nil {
+		return pg, err
+	}
+	t1 := time.Now()
+	for {
+		if err := dbh.Ping(); err != nil {
+			if time.Since(t1).Seconds() > timeout.Seconds() {
+				return pg, errors.New("timed out, no connection retrieved")
+			}
+			continue
+		}
+		break
+	}
+	pg.DB = dbh
+	return pg, nil
+}
+
+func cloneDbSchemaRepo(repo string) (string, error) {
+	path, err := ioutil.TempDir("", "content")
+	if err != nil {
+		return path, err
+	}
+	_, err = git.PlainClone(path, false, &git.CloneOptions{URL: repo})
+	return path, err
+}
+
+func TestMain(m *testing.M) {
+	pg, err := NewTestPostgresFromEnv()
+	if err != nil {
+		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
+	}
+	db = pg.DB
+	// add the citext extension
+	_, err = db.Exec("CREATE EXTENSION citext")
+	if err != nil {
+		log.Fatal(err)
+	}
+	dir, err := cloneDbSchemaRepo(schemaRepo)
+	defer os.RemoveAll(dir)
+	if err != nil {
+		log.Fatalf("issue with cloning %s repo %s\n", schemaRepo, err)
+	}
+	if err := goose.Up(db, dir); err != nil {
+		log.Fatalf("issue with running database migration %s\n", err)
+	}
+	go runGRPCServer(db)
+	os.Exit(m.Run())
+}
 
 func tearDownTest(t *testing.T) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
@@ -44,7 +153,9 @@ func NewPermission(perm, resource string) *pb.CreatePermissionRequest {
 
 func TestPermissionCreate(t *testing.T) {
 	defer tearDownTest(t)
-	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, "localhost"+port, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
 	}
@@ -298,4 +409,13 @@ func TestPermissionDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not delete resource with id %d", nperm.Data.Id)
 	}
+}
+
+func generateName() string {
+    b := make([]byte, 5)
+    if _, err := rand.Read(b); err != nil {
+        panic(err)
+    }
+    s := fmt.Sprintf("%X", b)
+    return s
 }
