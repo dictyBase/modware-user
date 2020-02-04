@@ -2,7 +2,6 @@ package nats
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -32,11 +31,10 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 )
 
-var dbName = generateName()
 var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
 var pgConn = fmt.Sprintf(
 	"postgres://%s:%s@%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, dbName)
+	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, "nats_test")
 var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
 var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
@@ -191,6 +189,7 @@ func cloneDbSchemaRepo(repo string) (string, error) {
 }
 
 func TestMain(m *testing.M) {
+	fmt.Print(pgConn)
 	pg, err := NewTestPostgresFromEnv()
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
@@ -403,11 +402,11 @@ func TestUserDeleteReply(t *testing.T) {
 	}
 }
 
-func generateName() string {
-    b := make([]byte, 5)
-    if _, err := rand.Read(b); err != nil {
-        panic(err)
-    }
-    s := fmt.Sprintf("%X", b)
-    return s
-}
+// func generateName() string {
+//     b := make([]byte, 5)
+//     if _, err := rand.Read(b); err != nil {
+//         panic(err)
+//     }
+//     s := fmt.Sprintf("%X", b)
+//     return s
+// }
