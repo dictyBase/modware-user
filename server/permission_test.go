@@ -110,20 +110,20 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
-	db := pg.DB
+	odb := pg.DB
 	dbName := generateName()
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", dbName))
+	_, err = odb.Exec(fmt.Sprintf("CREATE DATABASE %s;", dbName))
 	if err != nil {
 		log.Fatalf("issue creating new db %s", err)
 	}
-	db.Close()
+	odb.Close()
 	pgNew, err := NewTestPostgresFromEnv(dbName)
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
-	newDb := pgNew.DB
+	db = pgNew.DB
 	// add the citext extension
-	_, err = newDb.Exec("CREATE EXTENSION citext")
+	_, err = db.Exec("CREATE EXTENSION citext")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestMain(m *testing.M) {
 	if err := goose.Up(db, dir); err != nil {
 		log.Fatalf("issue with running database migration %s\n", err)
 	}
-	go runGRPCServer(newDb)
+	go runGRPCServer(db)
 	os.Exit(m.Run())
 }
 
