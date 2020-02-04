@@ -96,7 +96,6 @@ func CheckPostgresEnv() error {
 	envs := []string{
 		"POSTGRES_USER",
 		"POSTGRES_PASSWORD",
-		"POSTGRES_DB",
 		"POSTGRES_HOST",
 	}
 	for _, e := range envs {
