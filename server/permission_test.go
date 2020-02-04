@@ -3,86 +3,22 @@ package server
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	_ "github.com/jackc/pgx/stdlib"
 	"google.golang.org/grpc"
-	git "gopkg.in/src-d/go-git.v4"
 )
 
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
-var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
-var pgConn = fmt.Sprintf(
-	"postgres://%s:%s@%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, os.Getenv("POSTGRES_DB"))
 var db *sql.DB
 
 const (
 	port = ":9595"
 )
-
-func CheckPostgresEnv() error {
-	envs := []string{
-		"POSTGRES_USER",
-		"POSTGRES_PASSWORD",
-		"POSTGRES_DB",
-		"POSTGRES_HOST",
-	}
-	for _, e := range envs {
-		if len(os.Getenv(e)) == 0 {
-			return fmt.Errorf("env %s is not set", e)
-		}
-	}
-	return nil
-}
-
-type TestPostgres struct {
-	DB *sql.DB
-}
-
-func NewTestPostgresFromEnv() (*TestPostgres, error) {
-	pg := new(TestPostgres)
-	if err := CheckPostgresEnv(); err != nil {
-		return pg, err
-	}
-	dbh, err := sql.Open("pgx", pgConn)
-	if err != nil {
-		return pg, err
-	}
-	timeout, err := time.ParseDuration("28s")
-	if err != nil {
-		return pg, err
-	}
-	t1 := time.Now()
-	for {
-		if err := dbh.Ping(); err != nil {
-			if time.Since(t1).Seconds() > timeout.Seconds() {
-				return pg, errors.New("timed out, no connection retrieved")
-			}
-			continue
-		}
-		break
-	}
-	pg.DB = dbh
-	return pg, nil
-}
-
-func cloneDbSchemaRepo(repo string) (string, error) {
-	path, err := ioutil.TempDir("", "content")
-	if err != nil {
-		return path, err
-	}
-	_, err = git.PlainClone(path, false, &git.CloneOptions{URL: repo})
-	return path, err
-}
 
 func tearDownTest(t *testing.T) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
