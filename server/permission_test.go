@@ -104,29 +104,6 @@ func cloneDbSchemaRepo(repo string) (string, error) {
 	return path, err
 }
 
-func TestMain(m *testing.M) {
-	pg, err := NewTestPostgresFromEnv()
-	if err != nil {
-		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
-	}
-	db = pg.DB
-	// add the citext extension
-	_, err = db.Exec("CREATE EXTENSION citext")
-	if err != nil {
-		fmt.Printf("error creating extension citext %s", err)
-	}
-	dir, err := cloneDbSchemaRepo(schemaRepo)
-	defer os.RemoveAll(dir)
-	if err != nil {
-		log.Fatalf("issue with cloning %s repo %s\n", schemaRepo, err)
-	}
-	if err := goose.Up(db, dir); err != nil {
-		log.Fatalf("issue with running database migration %s\n", err)
-	}
-	go runGRPCServer(db)
-	os.Exit(m.Run())
-}
-
 func tearDownTest(t *testing.T) {
 	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
 		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
