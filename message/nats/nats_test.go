@@ -58,13 +58,15 @@ func runGRPCServer(db *sql.DB) {
 	dbh := runner.NewDB(db, "postgres")
 	grpcS := grpc.NewServer()
 	pb.RegisterUserServiceServer(grpcS, server.NewUserService(dbh))
+	pb.RegisterRoleServiceServer(grpcS, server.NewRoleService(dbh))
+	pb.RegisterPermissionServiceServer(grpcS, server.NewPermissionService(dbh))
 	lis, err := net.Listen("tcp", grpcPort)
 	if err != nil {
 		log.Fatalf("error listening to grpc port %s", err)
 	}
 	log.Printf("starting grpc server at port %s", grpcPort)
 	if err := grpcS.Serve(lis); err != nil {
-		log.Fatalf("error serving user server %s", err)
+		log.Fatalf("error serving grpc server %s", err)
 	}
 }
 

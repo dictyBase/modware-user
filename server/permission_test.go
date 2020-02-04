@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
-	"net"
 	"os"
 	"regexp"
 	"testing"
@@ -17,7 +15,6 @@ import (
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	_ "github.com/jackc/pgx/stdlib"
 	"google.golang.org/grpc"
-	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
 	git "gopkg.in/src-d/go-git.v4"
 )
 
@@ -29,24 +26,8 @@ var pgConn = fmt.Sprintf(
 var db *sql.DB
 
 const (
-	port = ":9596"
+	port = ":9595"
 )
-
-func runGRPCServer(db *sql.DB) {
-	dbh := runner.NewDB(db, "postgres")
-	grpcS := grpc.NewServer()
-	pb.RegisterPermissionServiceServer(grpcS, NewPermissionService(dbh))
-	pb.RegisterRoleServiceServer(grpcS, NewRoleService(dbh))
-	pb.RegisterUserServiceServer(grpcS, NewUserService(dbh))
-	lis, err := net.Listen("tcp", port)
-	if err != nil {
-		log.Fatalf("error listening to grpc port %s", err)
-	}
-	log.Printf("starting grpc server at port %s", port)
-	if err := grpcS.Serve(lis); err != nil {
-		log.Fatalf("error serving %s", err)
-	}
-}
 
 func CheckPostgresEnv() error {
 	envs := []string{
@@ -127,9 +108,7 @@ func NewPermission(perm, resource string) *pb.CreatePermissionRequest {
 
 func TestPermissionCreate(t *testing.T) {
 	defer tearDownTest(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, "localhost"+port, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
 	}
