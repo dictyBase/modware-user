@@ -111,7 +111,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
 	odb := pg.DB
-	dbName := generateName()
+	dbName := "servertest"
 	_, err = odb.Exec(fmt.Sprintf("CREATE DATABASE %s;", dbName))
 	if err != nil {
 		log.Fatalf("issue creating new db %s", err)
