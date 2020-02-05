@@ -86,9 +86,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("error setting up test db %s", err)
 	}
 	go runGRPCServer(db)
-	if err := db.Close(); err != nil {
-		log.Fatalf("error in closing database %s", err)
-	}
+	defer db.Close()
 	os.Exit(m.Run())
 }
 
