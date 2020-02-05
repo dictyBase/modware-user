@@ -2,7 +2,6 @@ package testutils
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -92,17 +91,11 @@ func NewTestPostgresFromEnv(isCreate bool) (*TestPostgres, error) {
 	}
 	pg.DB = dbh
 	if isCreate {
-		newDB := randomString(6, 8)
-		_, err = pg.DB.Exec(fmt.Sprintf("CREATE DATABASE %s WITH TEMPLATE %s OWNER %s", newDB, pg.ConnectParams.Database, pg.ConnectParams.User))
+		n, err := createNewDB(pg)
 		if err != nil {
-			return pg, fmt.Errorf("issue creating new db %s", err)
+			return pg, fmt.Errorf("error creating new database %s", err)
 		}
-		pg.ConnectParams.Database = newDB
-		newDBH, err := getPgxDbHandler(pg.ConnectParams)
-		if err != nil {
-			return pg, err
-		}
-		pg.DB = newDBH
+		pg.DB = n
 	}
 	return pg, nil
 }
@@ -122,6 +115,22 @@ func SetupTestDB(db *sql.DB) error {
 		return fmt.Errorf("issue with running database migration %s", err)
 	}
 	return nil
+}
+
+func createNewDB(pg *TestPostgres) (*sql.DB, error) {
+	d := &sql.DB{}
+	newDB := randomString(6, 8)
+	stmt := fmt.Sprintf("CREATE DATABASE %s WITH TEMPLATE %s OWNER %s", newDB, pg.ConnectParams.Database, pg.ConnectParams.User)
+	_, err := pg.DB.Exec(stmt)
+	if err != nil {
+		return d, fmt.Errorf("issue creating new db %s", err)
+	}
+	pg.ConnectParams.Database = newDB
+	newDBH, err := getPgxDbHandler(pg.ConnectParams)
+	if err != nil {
+		return d, err
+	}
+	return newDBH, nil
 }
 
 func getPgxDbHandler(cp *ConnectParams) (*sql.DB, error) {
@@ -148,20 +157,6 @@ func NewTestNatsFromEnv() (*TestNats, error) {
 	nc, err := gnats.Connect(natsAddr)
 	if err != nil {
 		return n, err
-	}
-	timeout, err := time.ParseDuration("28s")
-	if err != nil {
-		return n, err
-	}
-	t1 := time.Now()
-	for {
-		if !nc.IsConnected() {
-			if time.Since(t1).Seconds() > timeout.Seconds() {
-				return n, errors.New("timed out trying to connect to nats server")
-			}
-			continue
-		}
-		break
 	}
 	n.Conn = nc
 	return n, nil
