@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	"database/sql"
 
@@ -148,7 +149,9 @@ func replyUser(subj string, c message.UserClient, req *pubsub.IdRequest) *pubsub
 
 func TestUserGetReply(t *testing.T) {
 	defer testutils.TearDownTest(db, t)
-	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, "localhost"+grpcPort, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
 	}
