@@ -2,7 +2,6 @@ package nats
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -20,8 +19,8 @@ import (
 	"github.com/dictyBase/go-genproto/dictybaseapis/pubsub"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/dictyBase/modware-user/message"
-	"github.com/dictyBase/modware-user/testutils"
 	gclient "github.com/dictyBase/modware-user/message/grpc-client"
+	"github.com/dictyBase/modware-user/testutils"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/pressly/goose"
 	"google.golang.org/grpc"
@@ -30,13 +29,8 @@ import (
 	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
 )
 
-var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
-var pgConn = fmt.Sprintf(
-	"postgres://%s:%s@%s/%s?sslmode=disable",
-	os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, os.Getenv("POSTGRES_DB"))
 var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
-var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
 var db *sql.DB
 
 const (
@@ -79,70 +73,8 @@ func NewUser(email string) *pb.CreateUserRequest {
 	}
 }
 
-type TestPostgres struct {
-	DB *sql.DB
-}
-
-func NewTestPostgresFromEnv() (*TestPostgres, error) {
-	pg := new(TestPostgres)
-	if err := testutils.CheckPostgresEnv(); err != nil {
-		return pg, err
-	}
-	dbh, err := sql.Open("pgx", pgConn)
-	if err != nil {
-		return pg, err
-	}
-	timeout, err := time.ParseDuration("28s")
-	if err != nil {
-		return pg, err
-	}
-	t1 := time.Now()
-	for {
-		if err := dbh.Ping(); err != nil {
-			if time.Since(t1).Seconds() > timeout.Seconds() {
-				return pg, errors.New("timed out, no connection retrieved")
-			}
-			continue
-		}
-		break
-	}
-	pg.DB = dbh
-	return pg, nil
-}
-
-type TestNats struct {
-	Conn *gnats.Conn
-}
-
-func NewTestNatsFromEnv() (*TestNats, error) {
-	n := new(TestNats)
-	if err := testutils.CheckNatsEnv(); err != nil {
-		return n, err
-	}
-	nc, err := gnats.Connect(natsAddr)
-	if err != nil {
-		return n, err
-	}
-	timeout, err := time.ParseDuration("28s")
-	if err != nil {
-		return n, err
-	}
-	t1 := time.Now()
-	for {
-		if !nc.IsConnected() {
-			if time.Since(t1).Seconds() > timeout.Seconds() {
-				return n, errors.New("timed out trying to connect to nats server")
-			}
-			continue
-		}
-		break
-	}
-	n.Conn = nc
-	return n, nil
-}
-
 func TestMain(m *testing.M) {
-	pg, err := NewTestPostgresFromEnv()
+	pg, err := testutils.NewTestPostgresFromEnv(true)
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
@@ -160,7 +92,7 @@ func TestMain(m *testing.M) {
 	if err := goose.Up(db, dir); err != nil {
 		log.Fatalf("issue with running database migration %s\n", err)
 	}
-	_, err = NewTestNatsFromEnv()
+	_, err = testutils.NewTestNatsFromEnv()
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestNatsFromEnv instance %s", err)
 	}
