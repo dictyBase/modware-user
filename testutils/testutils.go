@@ -11,10 +11,11 @@ import (
 	"time"
 
 	gnats "github.com/nats-io/go-nats"
+	"github.com/pressly/goose"
 	git "gopkg.in/src-d/go-git.v4"
 )
 
-var SchemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
+var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
 var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
 var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
@@ -91,7 +92,7 @@ func NewTestPostgresFromEnv(isCreate bool) (*TestPostgres, error) {
 	}
 	pg.DB = dbh
 	if isCreate {
-		newDB := RandomString(6, 8)
+		newDB := randomString(6, 8)
 		_, err = pg.DB.Exec(fmt.Sprintf("CREATE DATABASE %s WITH TEMPLATE %s OWNER %s", newDB, pg.ConnectParams.Database, pg.ConnectParams.User))
 		if err != nil {
 			return pg, fmt.Errorf("issue creating new db %s", err)
@@ -104,6 +105,23 @@ func NewTestPostgresFromEnv(isCreate bool) (*TestPostgres, error) {
 		pg.DB = newDBH
 	}
 	return pg, nil
+}
+
+func SetupTestDB(db *sql.DB) error {
+	// add the citext extension
+	_, err := db.Exec("CREATE EXTENSION citext")
+	if err != nil {
+		return err
+	}
+	dir, err := cloneDbSchemaRepo(schemaRepo)
+	defer os.RemoveAll(dir)
+	if err != nil {
+		return fmt.Errorf("issue with cloning %s repo %s", schemaRepo, err)
+	}
+	if err := goose.Up(db, dir); err != nil {
+		return fmt.Errorf("issue with running database migration %s", err)
+	}
+	return nil
 }
 
 func getPgxDbHandler(cp *ConnectParams) (*sql.DB, error) {
@@ -149,7 +167,7 @@ func NewTestNatsFromEnv() (*TestNats, error) {
 	return n, nil
 }
 
-func CloneDbSchemaRepo(repo string) (string, error) {
+func cloneDbSchemaRepo(repo string) (string, error) {
 	path, err := ioutil.TempDir("", "content")
 	if err != nil {
 		return path, err
@@ -159,7 +177,7 @@ func CloneDbSchemaRepo(repo string) (string, error) {
 }
 
 // Generates a random string between a range(min and max) of length
-func RandomString(min, max int) string {
+func randomString(min, max int) string {
 	alphanum := []byte("abcdefghijklmnopqrstuvwxyz")
 	rand.Seed(time.Now().UTC().UnixNano())
 	size := min + rand.Intn(max-min)
