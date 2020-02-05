@@ -10,6 +10,7 @@ import (
 
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/dictyBase/modware-user/testutils"
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 )
@@ -131,7 +132,7 @@ func NewUpdateRoleWithPermission(newRole string, existingRole *pb.Role, perm *pb
 }
 
 func TestRoleCreateWithPermission(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -167,7 +168,7 @@ func TestRoleCreateWithPermission(t *testing.T) {
 }
 
 func TestRoleUpdateWithPermission(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -203,7 +204,7 @@ func TestRoleUpdateWithPermission(t *testing.T) {
 }
 
 func TestRoleDelete(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -222,7 +223,7 @@ func TestRoleDelete(t *testing.T) {
 }
 
 func TestRoleGet(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -247,7 +248,7 @@ func TestRoleGet(t *testing.T) {
 }
 
 func TestRoleGetWithFields(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -275,7 +276,7 @@ func TestRoleGetWithFields(t *testing.T) {
 }
 
 func TestRoleGetWithFieldsAndInclude(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -325,7 +326,7 @@ func TestRoleGetWithFieldsAndInclude(t *testing.T) {
 }
 
 func TestRoleGetAll(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -357,7 +358,7 @@ func TestRoleGetAll(t *testing.T) {
 }
 
 func TestRoleGetAllWithFields(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -396,7 +397,7 @@ func TestRoleGetAllWithFields(t *testing.T) {
 }
 
 func TestRoleGetAllWithFieldsAndFilter(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -436,7 +437,7 @@ func TestRoleGetAllWithFieldsAndFilter(t *testing.T) {
 }
 
 func TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -510,7 +511,7 @@ func TestRoleGetAllWithIncludeAndFilter(t *testing.T) {
 }
 
 func TestRoleCreateUserRelationship(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -563,7 +564,7 @@ func TestRoleCreateUserRelationship(t *testing.T) {
 }
 
 func TestRoleCreatePermissionRelationship(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -617,7 +618,7 @@ func TestRoleCreatePermissionRelationship(t *testing.T) {
 }
 
 func TestRoleUpdatePermissionRelationship(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -681,7 +682,7 @@ func TestRoleUpdatePermissionRelationship(t *testing.T) {
 }
 
 func TestRoleDeletePermissionRelationship(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -717,7 +718,7 @@ func TestRoleDeletePermissionRelationship(t *testing.T) {
 }
 
 func TestRoleGetPermissionRelationship(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -753,7 +754,7 @@ func TestRoleGetPermissionRelationship(t *testing.T) {
 }
 
 func TestGetRelatedUsers(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+port, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
