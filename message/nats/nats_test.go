@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"testing"
-	"time"
 
 	"database/sql"
 
@@ -22,7 +21,6 @@ import (
 	gclient "github.com/dictyBase/modware-user/message/grpc-client"
 	"github.com/dictyBase/modware-user/testutils"
 	_ "github.com/jackc/pgx/stdlib"
-	"github.com/pressly/goose"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -79,22 +77,12 @@ func TestMain(m *testing.M) {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
 	db = pg.DB
-	// add the citext extension
-	_, err = db.Exec("CREATE EXTENSION citext")
-	if err != nil {
-		log.Fatal(err)
-	}
-	dir, err := testutils.CloneDbSchemaRepo(testutils.SchemaRepo)
-	defer os.RemoveAll(dir)
-	if err != nil {
-		log.Fatalf("issue with cloning %s repo %s\n", testutils.SchemaRepo, err)
-	}
-	if err := goose.Up(db, dir); err != nil {
-		log.Fatalf("issue with running database migration %s\n", err)
-	}
 	_, err = testutils.NewTestNatsFromEnv()
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestNatsFromEnv instance %s", err)
+	}
+	if err := testutils.SetupTestDB(db); err != nil {
+		log.Fatalf("error setting up test db %s", err)
 	}
 	go runGRPCServer(db)
 	os.Exit(m.Run())
@@ -160,9 +148,7 @@ func replyUser(subj string, c message.UserClient, req *pubsub.IdRequest) *pubsub
 
 func TestUserGetReply(t *testing.T) {
 	defer testutils.TearDownTest(db, t)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, "localhost"+grpcPort, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
 	}

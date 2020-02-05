@@ -15,7 +15,6 @@ import (
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/dictyBase/modware-user/testutils"
 	_ "github.com/jackc/pgx/stdlib"
-	"github.com/pressly/goose"
 	"google.golang.org/grpc"
 	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
 )
@@ -48,18 +47,8 @@ func TestMain(m *testing.M) {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
 	db = pg.DB
-	// add the citext extension
-	_, err = db.Exec("CREATE EXTENSION citext")
-	if err != nil {
-		log.Fatal(err)
-	}
-	dir, err := testutils.CloneDbSchemaRepo(testutils.SchemaRepo)
-	defer os.RemoveAll(dir)
-	if err != nil {
-		log.Fatalf("issue with cloning %s repo %s\n", testutils.SchemaRepo, err)
-	}
-	if err := goose.Up(db, dir); err != nil {
-		log.Fatalf("issue with running database migration %s\n", err)
+	if err := testutils.SetupTestDB(db); err != nil {
+		log.Fatalf("error setting up test db %s", err)
 	}
 	go runGRPCServer(db)
 	os.Exit(m.Run())
