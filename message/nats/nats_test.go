@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -21,6 +20,7 @@ import (
 	"github.com/dictyBase/go-genproto/dictybaseapis/pubsub"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/dictyBase/modware-user/message"
+	"github.com/dictyBase/modware-user/testutils"
 	gclient "github.com/dictyBase/modware-user/message/grpc-client"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/pressly/goose"
@@ -28,7 +28,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
-	git "gopkg.in/src-d/go-git.v4"
 )
 
 var pgAddr = fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
@@ -38,21 +37,11 @@ var pgConn = fmt.Sprintf(
 var natsHost = os.Getenv("NATS_HOST")
 var natsPort = os.Getenv("NATS_PORT")
 var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
-var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
 var db *sql.DB
 
 const (
 	grpcPort = ":9595"
 )
-
-func tearDownTest(t *testing.T) {
-	for _, tbl := range []string{"auth_permission", "auth_role", "auth_user", "auth_user_info", "auth_user_role", "auth_role_permission"} {
-		_, err := db.Exec(fmt.Sprintf("TRUNCATE %s CASCADE", tbl))
-		if err != nil {
-			t.Fatalf("unable to truncate table %s %s\n", tbl, err)
-		}
-	}
-}
 
 func runGRPCServer(db *sql.DB) {
 	dbh := runner.NewDB(db, "postgres")
@@ -90,41 +79,13 @@ func NewUser(email string) *pb.CreateUserRequest {
 	}
 }
 
-func CheckPostgresEnv() error {
-	envs := []string{
-		"POSTGRES_USER",
-		"POSTGRES_PASSWORD",
-		"POSTGRES_DB",
-		"POSTGRES_HOST",
-	}
-	for _, e := range envs {
-		if len(os.Getenv(e)) == 0 {
-			return fmt.Errorf("env %s is not set", e)
-		}
-	}
-	return nil
-}
-
-func CheckNatsEnv() error {
-	envs := []string{
-		"NATS_HOST",
-		"NATS_PORT",
-	}
-	for _, e := range envs {
-		if len(os.Getenv(e)) == 0 {
-			return fmt.Errorf("env %s is not set", e)
-		}
-	}
-	return nil
-}
-
 type TestPostgres struct {
 	DB *sql.DB
 }
 
 func NewTestPostgresFromEnv() (*TestPostgres, error) {
 	pg := new(TestPostgres)
-	if err := CheckPostgresEnv(); err != nil {
+	if err := testutils.CheckPostgresEnv(); err != nil {
 		return pg, err
 	}
 	dbh, err := sql.Open("pgx", pgConn)
@@ -155,7 +116,7 @@ type TestNats struct {
 
 func NewTestNatsFromEnv() (*TestNats, error) {
 	n := new(TestNats)
-	if err := CheckNatsEnv(); err != nil {
+	if err := testutils.CheckNatsEnv(); err != nil {
 		return n, err
 	}
 	nc, err := gnats.Connect(natsAddr)
@@ -180,15 +141,6 @@ func NewTestNatsFromEnv() (*TestNats, error) {
 	return n, nil
 }
 
-func cloneDbSchemaRepo(repo string) (string, error) {
-	path, err := ioutil.TempDir("", "content")
-	if err != nil {
-		return path, err
-	}
-	_, err = git.PlainClone(path, false, &git.CloneOptions{URL: repo})
-	return path, err
-}
-
 func TestMain(m *testing.M) {
 	pg, err := NewTestPostgresFromEnv()
 	if err != nil {
@@ -200,10 +152,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dir, err := cloneDbSchemaRepo(schemaRepo)
+	dir, err := testutils.CloneDbSchemaRepo(testutils.SchemaRepo)
 	defer os.RemoveAll(dir)
 	if err != nil {
-		log.Fatalf("issue with cloning %s repo %s\n", schemaRepo, err)
+		log.Fatalf("issue with cloning %s repo %s\n", testutils.SchemaRepo, err)
 	}
 	if err := goose.Up(db, dir); err != nil {
 		log.Fatalf("issue with running database migration %s\n", err)
@@ -275,7 +227,7 @@ func replyUser(subj string, c message.UserClient, req *pubsub.IdRequest) *pubsub
 }
 
 func TestUserGetReply(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	conn, err := grpc.DialContext(ctx, "localhost"+grpcPort, grpc.WithInsecure(), grpc.WithBlock())
@@ -325,7 +277,7 @@ func TestUserGetReply(t *testing.T) {
 }
 
 func TestUserExistReply(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
@@ -364,7 +316,7 @@ func TestUserExistReply(t *testing.T) {
 }
 
 func TestUserDeleteReply(t *testing.T) {
-	defer tearDownTest(t)
+	defer testutils.TearDownTest(db, t)
 	conn, err := grpc.Dial("localhost"+grpcPort, grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("could not connect to grpc server %s\n", err)
