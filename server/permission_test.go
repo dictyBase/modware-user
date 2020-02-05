@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -43,58 +42,12 @@ func runGRPCServer(db *sql.DB) {
 	}
 }
 
-type TestPostgres struct {
-	DB *sql.DB
-}
-
-func NewTestPostgresFromEnv(dbName string) (*TestPostgres, error) {
-	pg := new(TestPostgres)
-	if err := testutils.CheckPostgresEnv(); err != nil {
-		return pg, err
-	}
-	pgAddr := fmt.Sprintf("%s:%s", os.Getenv("POSTGRES_HOST"), os.Getenv("POSTGRES_PORT"))
-	pgConn := fmt.Sprintf(
-		"postgres://%s:%s@%s/%s?sslmode=disable",
-		os.Getenv("POSTGRES_USER"), os.Getenv("POSTGRES_PASSWORD"), pgAddr, dbName)
-	dbh, err := sql.Open("pgx", pgConn)
-	if err != nil {
-		return pg, err
-	}
-	timeout, err := time.ParseDuration("28s")
-	if err != nil {
-		return pg, err
-	}
-	t1 := time.Now()
-	for {
-		if err := dbh.Ping(); err != nil {
-			if time.Since(t1).Seconds() > timeout.Seconds() {
-				return pg, errors.New("timed out, no connection retrieved")
-			}
-			continue
-		}
-		break
-	}
-	pg.DB = dbh
-	return pg, nil
-}
-
 func TestMain(m *testing.M) {
-	pg, err := NewTestPostgresFromEnv(os.Getenv("POSTGRES_DB"))
+	pg, err := testutils.NewTestPostgresFromEnv(true)
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
-	odb := pg.DB
-	dbName := "servertest"
-	_, err = odb.Exec(fmt.Sprintf("CREATE DATABASE %s;", dbName))
-	if err != nil {
-		log.Fatalf("issue creating new db %s", err)
-	}
-	odb.Close()
-	pgNew, err := NewTestPostgresFromEnv(dbName)
-	if err != nil {
-		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
-	}
-	db = pgNew.DB
+	db = pg.DB
 	// add the citext extension
 	_, err = db.Exec("CREATE EXTENSION citext")
 	if err != nil {
