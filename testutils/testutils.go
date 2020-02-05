@@ -120,7 +120,9 @@ func SetupTestDB(db *sql.DB) error {
 func createNewDB(pg *TestPostgres) (*sql.DB, error) {
 	d := &sql.DB{}
 	newDB := randomString(6, 8)
-	stmt := fmt.Sprintf("CREATE DATABASE %s WITH TEMPLATE %s OWNER %s", newDB, pg.ConnectParams.Database, pg.ConnectParams.User)
+	db := pg.ConnectParams.Database
+	user := pg.ConnectParams.User
+	stmt := fmt.Sprintf("CREATE DATABASE %s WITH TEMPLATE %s OWNER %s", newDB, db, user)
 	_, err := pg.DB.Exec(stmt)
 	if err != nil {
 		return d, fmt.Errorf("issue creating new db %s", err)
