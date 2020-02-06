@@ -42,7 +42,7 @@ func runGRPCServer(db *sql.DB) {
 }
 
 func TestMain(m *testing.M) {
-	pg, err := testutils.NewTestPostgresFromEnv(true)
+	pg, err := testutils.NewTestPostgresFromEnv()
 	if err != nil {
 		log.Fatalf("unable to construct new NewTestPostgresFromEnv instance %s", err)
 	}
