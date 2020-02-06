@@ -72,12 +72,16 @@ func NewTestPostgresFromEnv() (*TestPostgres, error) {
 	if err != nil {
 		return pg, err
 	}
-	pg.DB = dbh
-	n, err := createNewDB(pg)
+	n, err := createNewDB(dbh, pg.ConnectParams.Database, pg.ConnectParams.User)
 	if err != nil {
 		return pg, fmt.Errorf("error creating new database %s", err)
 	}
-	pg.DB = n
+	pg.ConnectParams.Database = n
+	newDBH, err := getPgxDbHandler(pg.ConnectParams)
+	if err != nil {
+		return pg, err
+	}
+	pg.DB = newDBH
 	return pg, nil
 }
 
@@ -98,24 +102,6 @@ func SetupTestDB(db *sql.DB) error {
 	return nil
 }
 
-func createNewDB(pg *TestPostgres) (*sql.DB, error) {
-	d := &sql.DB{}
-	newDB := randomString(6, 8)
-	db := pg.ConnectParams.Database
-	user := pg.ConnectParams.User
-	stmt := fmt.Sprintf("CREATE DATABASE %s WITH TEMPLATE %s OWNER %s", newDB, db, user)
-	_, err := pg.DB.Exec(stmt)
-	if err != nil {
-		return d, fmt.Errorf("issue creating new db %s", err)
-	}
-	pg.ConnectParams.Database = newDB
-	newDBH, err := getPgxDbHandler(pg.ConnectParams)
-	if err != nil {
-		return d, err
-	}
-	return newDBH, nil
-}
-
 func getPgxDbHandler(cp *ConnectParams) (*sql.DB, error) {
 	db := &sql.DB{}
 	pgConn := fmt.Sprintf(
@@ -126,6 +112,16 @@ func getPgxDbHandler(cp *ConnectParams) (*sql.DB, error) {
 		return db, err
 	}
 	return dbh, nil
+}
+
+func createNewDB(dbh *sql.DB, db string, user string) (string, error) {
+	newDB := randomString(6, 8)
+	stmt := fmt.Sprintf("CREATE DATABASE %s WITH TEMPLATE %s OWNER %s", newDB, db, user)
+	_, err := dbh.Exec(stmt)
+	if err != nil {
+		return newDB, fmt.Errorf("error creating new db %s", err)
+	}
+	return newDB, nil
 }
 
 func cloneDbSchemaRepo(repo string) (string, error) {
