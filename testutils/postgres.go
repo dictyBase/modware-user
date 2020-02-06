@@ -9,15 +9,11 @@ import (
 	"testing"
 	"time"
 
-	gnats "github.com/nats-io/go-nats"
 	"github.com/pressly/goose"
 	git "gopkg.in/src-d/go-git.v4"
 )
 
 var schemaRepo string = "https://github.com/dictybase-docker/dictyuser-schema"
-var natsHost = os.Getenv("NATS_HOST")
-var natsPort = os.Getenv("NATS_PORT")
-var natsAddr = fmt.Sprintf("nats://%s:%s", natsHost, natsPort)
 
 func CheckPostgresEnv() error {
 	envs := []string{
@@ -25,19 +21,6 @@ func CheckPostgresEnv() error {
 		"POSTGRES_PASSWORD",
 		"POSTGRES_DB",
 		"POSTGRES_HOST",
-	}
-	for _, e := range envs {
-		if len(os.Getenv(e)) == 0 {
-			return fmt.Errorf("env %s is not set", e)
-		}
-	}
-	return nil
-}
-
-func CheckNatsEnv() error {
-	envs := []string{
-		"NATS_HOST",
-		"NATS_PORT",
 	}
 	for _, e := range envs {
 		if len(os.Getenv(e)) == 0 {
@@ -73,7 +56,7 @@ type ConnectParams struct {
 	Port     string `validate:"required"`
 }
 
-func NewTestPostgresFromEnv(isCreate bool) (*TestPostgres, error) {
+func NewTestPostgresFromEnv() (*TestPostgres, error) {
 	pg := new(TestPostgres)
 	if err := CheckPostgresEnv(); err != nil {
 		return pg, err
@@ -90,13 +73,11 @@ func NewTestPostgresFromEnv(isCreate bool) (*TestPostgres, error) {
 		return pg, err
 	}
 	pg.DB = dbh
-	if isCreate {
-		n, err := createNewDB(pg)
-		if err != nil {
-			return pg, fmt.Errorf("error creating new database %s", err)
-		}
-		pg.DB = n
+	n, err := createNewDB(pg)
+	if err != nil {
+		return pg, fmt.Errorf("error creating new database %s", err)
 	}
+	pg.DB = n
 	return pg, nil
 }
 
@@ -145,23 +126,6 @@ func getPgxDbHandler(cp *ConnectParams) (*sql.DB, error) {
 		return db, err
 	}
 	return dbh, nil
-}
-
-type TestNats struct {
-	Conn *gnats.Conn
-}
-
-func NewTestNatsFromEnv() (*TestNats, error) {
-	n := new(TestNats)
-	if err := CheckNatsEnv(); err != nil {
-		return n, err
-	}
-	nc, err := gnats.Connect(natsAddr)
-	if err != nil {
-		return n, err
-	}
-	n.Conn = nc
-	return n, nil
 }
 
 func cloneDbSchemaRepo(repo string) (string, error) {
