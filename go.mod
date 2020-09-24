@@ -5,7 +5,7 @@ require (
 	github.com/dictyBase/apihelpers v0.0.0-20190516195304-f1adf8d9f18d
 	github.com/dictyBase/go-genproto v0.0.0-20200122001226-b1ccbdee4aa3
 	github.com/fatih/structs v1.1.0
-	github.com/go-chi/cors v1.0.0
+	github.com/go-chi/cors v1.1.1
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2
