@@ -13,17 +13,17 @@ import (
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
 	"github.com/dictyBase/modware-user/server"
 	"github.com/go-chi/cors"
-	"github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
-	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	_ "github.com/jackc/pgx/stdlib"
 	"github.com/sirupsen/logrus"
 	"github.com/soheilhy/cmux"
+	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	runner "gopkg.in/mgutz/dat.v2/sqlx-runner"
-	"gopkg.in/urfave/cli.v1"
 )
 
 func RunRoleServer(c *cli.Context) error {

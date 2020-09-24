@@ -11,10 +11,10 @@ import (
 	gclient "github.com/dictyBase/modware-user/message/grpc-client"
 	"github.com/dictyBase/modware-user/message/nats"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"gopkg.in/urfave/cli.v1"
 )
 
 func shutdown(r message.Reply, logger *logrus.Entry) {
