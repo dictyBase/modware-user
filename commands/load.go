@@ -14,8 +14,8 @@ import (
 	"github.com/dictyBase/apihelpers/aphfile"
 	"github.com/dictyBase/go-genproto/dictybaseapis/api/jsonapi"
 	pb "github.com/dictyBase/go-genproto/dictybaseapis/user"
+	"github.com/urfave/cli"
 	"google.golang.org/grpc"
-	cli "gopkg.in/urfave/cli.v1"
 )
 
 type UserStatus struct {
