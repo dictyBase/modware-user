@@ -7,7 +7,7 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
-    app: {{ template "fullname" . }}-users
+    app: {{ template "user-api.fullname" . }}-users
 spec:
   type: {{ .Values.service.users.type }}
   ports:
@@ -15,7 +15,7 @@ spec:
     port: {{ .Values.service.users.port  }}
     targetPort: {{ .Values.service.users.name }}   
   selector:
-    app: {{ template "fullname" . }}-users
+    app: {{ template "user-api.fullname" . }}-users
 ...
 ---
 
@@ -27,7 +27,7 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
-    app: {{ template "fullname" . }}-roles
+    app: {{ template "user-api.fullname" . }}-roles
 spec:
   type: {{ .Values.service.roles.type }}
   ports:
@@ -35,7 +35,7 @@ spec:
     port: {{ .Values.service.roles.port  }}
     targetPort: {{ .Values.service.roles.name }}   
   selector:
-    app: {{ template "fullname" . }}-roles
+    app: {{ template "user-api.fullname" . }}-roles
 
 ...
 ---
@@ -48,7 +48,7 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
-    app: {{ template "fullname" . }}-permissions
+    app: {{ template "user-api.fullname" . }}-permissions
 spec:
   type: {{ .Values.service.permissions.type }}
   ports:
@@ -56,4 +56,4 @@ spec:
     port: {{ .Values.service.permissions.port  }}
     targetPort: {{ .Values.service.permissions.name }}   
   selector:
-    app: {{ template "fullname" . }}-permissions
+    app: {{ template "user-api.fullname" . }}-permissions

@@ -1,17 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{{ template "fullname" . }}-users"
+  name: {{ template "user-api.fullname" . }}-users
   labels:
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app: {{ template "user-api.fullname" . }}-users
+    chart: {{ template "user-api.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "user-api.fullname" . }}-users
   template:
     metadata:
       labels:
-        app: {{ template "fullname" . }}-users
+        app: {{ template "user-api.fullname" . }}-users
     spec:
       containers:
         - name: {{ .Chart.Name }}-users

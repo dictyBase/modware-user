@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
+  name: {{ template "user-api.fullname" . }}-{{ .Values.pubsub.name }}
   labels:
-    app: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app: {{ template "user-api.fullname" . }}-{{ .Values.pubsub.name }}
+    chart: {{ template "user-api.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
+      app: {{ template "user-api.fullname" . }}-{{ .Values.pubsub.name }}
   template:
     metadata:
       labels:
-        app: {{ template "fullname" . }}-{{ .Values.pubsub.name }}
+        app: {{ template "user-api.fullname" . }}-{{ .Values.pubsub.name }}
     spec:
       containers:
       - name: "{{ .Chart.Name }}-{{ .Values.pubsub.name }}"
