@@ -27,7 +27,7 @@ require (
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/soheilhy/cmux v0.1.4
-	github.com/urfave/cli v1.22.4
+	github.com/urfave/cli v1.22.5
 	google.golang.org/grpc v1.33.2
 	google.golang.org/grpc/examples v0.0.0-20200924182952-21f897eab8af // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
