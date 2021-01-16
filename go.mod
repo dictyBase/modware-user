@@ -21,7 +21,7 @@ require (
 	github.com/mwitkow/go-proto-validators v0.3.0 // indirect
 	github.com/nats-io/gnatsd v1.4.0 // indirect
 	github.com/nats-io/go-nats v1.7.2
-	github.com/pressly/goose v2.6.0+incompatible
+	github.com/pressly/goose v2.7.0+incompatible
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
