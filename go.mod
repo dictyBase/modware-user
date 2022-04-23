@@ -26,7 +26,7 @@ require (
 	github.com/smartystreets/assertions v0.0.0-20190116191733-b6c0e53d7304 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/soheilhy/cmux v0.1.5
-	github.com/urfave/cli v1.22.5
+	github.com/urfave/cli v1.22.7
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/genproto v0.0.0-20200806141610-86f49bd18e98 // indirect
 	google.golang.org/grpc v1.39.0
