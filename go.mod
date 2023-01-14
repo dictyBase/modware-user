@@ -27,15 +27,12 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/soheilhy/cmux v0.1.5
 	github.com/urfave/cli v1.22.5
-	google.golang.org/appengine v1.6.6 // indirect
-	google.golang.org/genproto v0.0.0-20200806141610-86f49bd18e98 // indirect
-	google.golang.org/grpc v1.39.0
+	google.golang.org/grpc v1.52.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/ini.v1 v1.41.0 // indirect
 	gopkg.in/mgutz/dat.v2 v2.0.0-20171004160617-d76e4f81c4ef
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/stretchr/testify.v1 v1.2.2 // indirect
-	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
 
 go 1.13
