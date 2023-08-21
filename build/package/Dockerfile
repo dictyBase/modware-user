@@ -1,4 +1,4 @@
-FROM golang:1.13.15-buster AS builder
+FROM golang:1.20.6-bullseye AS builder
 LABEL maintainer="Siddhartha Basu <siddhartha-basu@northwestern.edu>"
 ENV GOPROXY https://proxy.golang.org
 ENV GO111MODULE=on \
@@ -24,8 +24,7 @@ RUN go build \
     -tags netgo \
     -o /bin/app \
     main.go
-RUN strip /bin/app \
-    && upx -q -9 /bin/app
+RUN upx -q -9 /bin/app
 
 FROM gcr.io/distroless/static
 COPY --from=builder /bin/app /usr/local/bin/
