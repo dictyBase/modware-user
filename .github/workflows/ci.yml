@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:9.6.6-alpine
+        image: postgres:14-alpine
         env:
           POSTGRES_DB: pgtest
           POSTGRES_USER: pguser
@@ -16,16 +16,16 @@ jobs:
         ports:
           - 5432/tcp
       nats:
-        image: nats:1.0.6
+        image: nats:2.9.17-alpine
         ports:
           - 4222/tcp
     steps:
       - name: set up golang
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.13.15
+          go-version: '~1.20.6'
       - name: check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: unit test
         run: go test -covermode=atomic -coverprofile=profile.cov -v ./...
         env:
@@ -38,44 +38,13 @@ jobs:
           NATS_PORT: ${{ job.services.nats.ports[4222] }}
           GOPROXY: https://proxy.golang.org
       - name: upload coverage to codecov
-        uses: codecov/codecov-action@v2.0.2
+        uses: codecov/codecov-action@v3
         with:
           file: ./profile.cov
-          token: ${{ secrets.CODECOV_TOKEN }}
-  build:
+  call-docker-build:
     needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: set up golang
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.13.15
-      - name: check out code
-        uses: actions/checkout@v2
-      - name: set up docker buildx
-        uses: docker/setup-buildx-action@v1
-      - name: cache docker layers
-        uses: actions/cache@v2.1.6
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-      - name: log into dockerhub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: get short sha
-        id: type
-        run: |
-          sha=$(git rev-parse --short HEAD)
-          echo ::set-output name=id::${sha}
-      - name: docker build and push
-        uses: docker/build-push-action@v2
-        with:
-          push: true
-          file: build/package/Dockerfile
-          tags: dictybase/modware-user:develop-${{ steps.type.outputs.id }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+    uses: dictyBase/workflows/.github/workflows/docker-build-push.yaml@develop
+    secrets: inherit
+    with:
+      repository: ${{ github.repository }}
+      ref: ${{ github.ref_name }}
