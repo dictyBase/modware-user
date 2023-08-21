@@ -280,7 +280,7 @@ func RunPermissionServer(c *cli.Context) error {
 }
 
 func getPgxDbHandler(c *cli.Context) (*sql.DB, error) {
-	cStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+	cStr := fmt.Sprintf("user=%s password=%s host=%s port=%s database=%s sslmode=require",
 		c.String("dictyuser-user"),
 		c.String("dictyuser-pass"),
 		c.String("dictyuser-host"),
